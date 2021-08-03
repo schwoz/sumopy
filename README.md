@@ -1,6 +1,9 @@
 # sumopy
 SUMOPy is a python suit for the SUMO microsimulator
 
+## Examples
+Example scenarios and information on the large scale, Bologna scenario can be found in folder examples. 
+
 ## Documentation
 Some documentation can be found on SUMO's web-site:
 
