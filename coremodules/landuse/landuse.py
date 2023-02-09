@@ -1753,7 +1753,8 @@ class Parking(am.ArrayObjman):
         #                                info = 'Length of a standard parking lot.' ,
         #                                #xmltag = 'pos',
         #                                )) 
-        
+#
+
                             
         
         self.add_col(am.IdsArrayConf( 'ids_lane', lanes, 
