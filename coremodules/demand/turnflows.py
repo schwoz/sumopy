@@ -283,12 +283,20 @@ class Turns(am.ArrayObjman):
     
     
     def export_xml(self,fd,indent=0):
-        #<fromEdge id="myEdge0">
-        # <toEdge id="myEdge1" probability="0.2"/>
-        # <toEdge id="myEdge2" probability="0.7"/>
-        # <toEdge id="myEdge3" probability="0.1"/>
-        #</fromEdge>
+        # <edgeRelations>
+           # <interval begin="0" end="3600">
+              # <edgeRelation from="myEdge0" to="myEdge1" probability="0.2"/>
+              # <edgeRelation from="myEdge0" to="myEdge2" probability="0.7"/>
+              # <edgeRelation from="myEdge0" to="myEdge3" probability="0.1"/>
         
+              # ... any other edges ...
+        
+           # </interval>
+        
+           # ... some further intervals ...
+        
+        # </edgeRelations>
+
         fromedge_to_turnprobs = {}
         for _id in self.get_ids():
             id_fromedge = self.ids_fromedge[_id]
@@ -298,13 +306,17 @@ class Turns(am.ArrayObjman):
             
         ids_sumoeges = self.get_edges().ids_sumo
         
+        fd.write(xm.begin('edgeRelations',indent))
         for id_fromedge in fromedge_to_turnprobs.keys():
-            fd.write(xm.begin('fromEdge'+xm.num('id',ids_sumoeges[id_fromedge]),indent))
+            
             for id_toedge, turnprob in fromedge_to_turnprobs[id_fromedge]:
-                fd.write(xm.start('toEdge',indent+2))
-                fd.write(xm.num('id',ids_sumoeges[id_toedge])+xm.num('probability',turnprob))
+                fd.write(xm.start('edgeRelation',indent+2))
+                fd.write(xm.num('from',ids_sumoeges[id_fromedge]))
+                fd.write(xm.num('to',ids_sumoeges[id_toedge]))
+                fd.write(xm.num('probability',turnprob))
                 fd.write(xm.stopit())
-            fd.write(xm.end('fromEdge',indent))
+                
+        fd.write(xm.end('edgeRelations',indent))
                                        
 class TurnflowModes(am.ArrayObjman):
     def __init__(self,ident,parent, modes, edges, **kwargs):
@@ -588,7 +600,7 @@ class Turnflows(am.ArrayObjman):
         zones = self.parent.get_scenario().landuse.zones
         ids_sinkedges = set()
         ids_sinkzone = zones.select_ids(zones.ids_landusetype.get_value() == 7)
-        for ids_edge in zones.ids_edges_orig[ids_sinkzone]:
+        for ids_edge in zones.ids_edges_inside[ids_sinkzone]:
             ids_sinkedges.update(ids_edge)
         #sinkedges = zones.ids_edges_orig.get_value().tolist()
         #print 'get_sinkedges',sinkedges
@@ -737,6 +749,7 @@ class Turnflows(am.ArrayObjman):
             # write flow and turns xml file for this mode
             time_start, time_end = self.export_flows_and_turns(flowfilepath, turnfilepath, id_mode)
             print '  time_start, time_end =',time_start, time_end
+            
             if time_end>time_start:# means there exist some flows for this mode
                 cmd = 'jtrrouter --route-files=%s --turn-ratio-files=%s --net-file=%s --output-file=%s --begin %s --end %s %s'\
                     %(  P+flowfilepath+P, 
@@ -770,7 +783,7 @@ class TurnflowRouter(db.TripoptionMixin,CmlMixin,Process):
                             info ='Generates routes from turnflow database using the JTR router.',
                             )
          
-        self.init_cml(' ')# pass  no commad to generate options only
+        self.init_cml('')# pass  no commad to generate options only
         
         
         attrsman = self.get_attrsman()
@@ -842,11 +855,11 @@ class TurnflowRouter(db.TripoptionMixin,CmlMixin,Process):
                         info = 'Apply the given time penalty when computing routing costs for minor-link internal lanes.',
                         ) 
                         
-        self.add_option('n_routing_threads', 1,
+        self.add_option('n_routing_threads', 0,
                         groupnames = ['options'],# 
                         cml = '--routing-threads',
                         name = 'Number of parallel threads', 
-                        info = 'The number of parallel execution threads used for routing.',
+                        info = 'ATTENTION: Numbers greater than 0 may cause errors!. The number of parallel execution threads used for routing.',
                         )
         self.add_option('seed', 1,
                         groupnames = ['options'],# 
@@ -906,7 +919,7 @@ class TurnflowRouter(db.TripoptionMixin,CmlMixin,Process):
         
     def do(self):
         print 'do'
-        cml = self.get_cml()
+        cml = self.get_cml(is_without_command = True)# only options, not the command #
         print '  cml=',cml
         self.parent.turnflows_to_routes(is_clear_trips = self.is_clear_trips, 
                                         is_export_network = self.is_export_network, 
@@ -1019,7 +1032,7 @@ class TurnflowImporter(Process):
         i_line = 1
         for line in f.readlines():
             cols = line.split(sep)
-            #print '    cols=',cols
+            print '    scanning line',i_line,'cols=',cols
             if len(cols)>=2:
                 id_fromedge_sumo = cols[0].strip()
                 if not ids_edge_sumo.has_index(id_fromedge_sumo):
@@ -1044,14 +1057,16 @@ class TurnflowImporter(Process):
                                     if not (id_toedge in edges.get_outgoing(id_fromedge)):
                                         pairs_sumoedge_unconnected.append((id_fromedge_sumo,id_toedge_sumo))
                                     else:
-                                        if cols[i+1].strip()!='':
-                                            turnflow = int(string.atof(cols[i+1].strip()))
-                                            turnflows.add_turn(self.t_start, self.t_end, self.id_mode,id_fromedge, id_toedge, turnflow)
-                                            
+                                        if i+1<len(cols):
+                                            if cols[i+1].strip()!='':
+                                                turnflow = int(string.atof(cols[i+1].strip()))
+                                                turnflows.add_turn(self.t_start, self.t_end, self.id_mode,id_fromedge, id_toedge, turnflow)
+	                                    else:
+                                                 print 'WARNING: inconsistent row in line %d, file %s'%(i_line,self.tffilepath)  
                 
                 
             else:
-                print 'WARNING: inconsistent row in line %d, file %s'%(i_line,self.tffilepath)
+                print '  Skipping line %d'%(i_line)
             i_line +=1
         f.close()
         if len(ids_sumoedge_notexist)>0:

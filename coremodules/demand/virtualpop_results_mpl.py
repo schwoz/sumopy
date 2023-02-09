@@ -4,6 +4,9 @@ from collections import OrderedDict
 #import  matplotlib as mpl 
 from agilepy.lib_base.geometry import *
 from coremodules.misc.matplottools import *
+import  matplotlib.pyplot as plt
+from matplotlib.path import Path
+import matplotlib.patches as patche
 import agilepy.lib_base.classman as cm
 import agilepy.lib_base.arrayman as am
 from agilepy.lib_base.geometry import *
@@ -671,3 +674,415 @@ class StrategyPlotter(PlotoptionsMixin, Process):
             
             if self.is_save:    
                 self.save_fig('virtualpop_strategy_timefactor_est')      
+                
+
+
+ 
+class ActivityPlotter(PlotoptionsMixin,Process):
+    def __init__(self, ident, virtualpop, logger = None, **kwargs):
+        print 'VpPlots.__init__'
+        self._init_common(  ident, 
+                            parent = virtualpop,
+                            name = 'VP plots', 
+                            logger = logger,
+                            info ='Plot of VP data.',
+                            )      
+        attrsman = self.set_attrsman(cm.Attrsman(self))
+        strategies = virtualpop.get_strategies()
+        activitytypes = virtualpop.parent.activitytypes
+        landusetypes = virtualpop.parent.get_scenario().landuse.landusetypes
+        
+        self.facilityfillmode  = attrsman.add(cm.AttrConf('facilityfillmode', kwargs.get('facilityfillmode','residents per facility'),
+                                        choices = ['residents per facility', 'destinations per facility'],# 'capacities'],
+                                        groupnames = ['options'], 
+                                        name = 'Facility fill mode', 
+                                        info = 'Defines how each facility is filled. The destinations refer to each intermediate activity',
+                                        )) 
+                                        
+        self.is_specific_facility = attrsman.add(cm.AttrConf(  'is_specific_facility', kwargs.get('is_specific_facility', False),
+                                        groupnames = ['options','zones'], 
+                                        name = 'Plot speficic facility', 
+                                        info = 'Plot for a specific facility.',
+                                        ))
+        
+        self.specific_facility = attrsman.add(cm.AttrConf(  'specific_facility', kwargs.get('specific_facility', -1),
+                                        groupnames = ['options','zones'], 
+                                        name = 'Facility', 
+                                        info = 'Specific facility to be considered for the plot, if it is requested to plot for a specific facility.',
+                                        ))
+        
+
+                           
+        ids_landusetype = list(set(landusetypes.get_ids()))
+        landusechoices = {}
+        for id_landuse, landusename in zip(ids_landusetype, landusetypes.typekeys[ids_landusetype]):
+            landusechoices[landusename] = id_landuse
+                                            
+        self.ids_landusetype = attrsman.add(cm.ListConf('ids_landusetype',1*ids_landusetype, 
+                                            groupnames = ['options'], 
+                                            choices = landusechoices,
+                                            name = 'Landuses', 
+                                            info = """Landuses to be visualized. To be considered for the facility fill mode: destinations per facility""",
+                                            ))
+                                            
+        ids_activitytype = list(set(activitytypes.get_ids()))
+        activitychoices = {}
+        for id_activity, activityname in zip(ids_activitytype, activitytypes.names[ids_activitytype]):
+            activitychoices[activityname] = id_activity
+                                            
+        self.ids_activitytype = attrsman.add(cm.ListConf('ids_activitytype',1*ids_activitytype, 
+                                            groupnames = ['options'], 
+                                            choices = activitychoices,
+                                            name = 'Activities', 
+                                            info = """Activities to be visualized. To be considered for the facility fill mode: destinations per facility""",
+                                            ))
+        
+        self.is_select_strategies = attrsman.add(cm.AttrConf( 'is_select_strategies', kwargs.get('is_select_strategies', False),
+                                        groupnames = ['options'], 
+                                        name = 'Select strategies', 
+                                        info = 'If plans are created, it is possible to select destinations per different strategies.',
+                                        ))
+                                        
+        ids_strategy = list(set(strategies.get_ids()))
+        strategychoices = {}
+        for id_strategy, strategyname in zip(ids_strategy, strategies.names[ids_strategy]):
+            strategychoices[strategyname] = id_strategy
+        
+        self.ids_strategy = attrsman.add(cm.ListConf('ids_strategy',1*ids_strategy, 
+                                            groupnames = ['options'], 
+                                            choices = strategychoices,
+                                            name = 'Strategies', 
+                                            info = """Strategies to be visualized: for each person will be checked the current strategy in the selected plan. To be considered for the facility fill mode: destinations per facility. This is active if 'select strategies' is activated""",
+                                            ))
+        #~ self.alpha_facilities = attrsman.add(cm.AttrConf(  'alpha_facilities', kwargs.get('alpha_facilities', 0.3),
+                                        #~ groupnames = ['options','zones'], 
+                                        #~ name = 'Building transparency', 
+                                        #~ info = 'Transparency of the fill color of buildings. This will apply in the case the facility value is zero.',
+                                        #~ ))
+                                        
+        #~ self.alpha_amenities = attrsman.add(cm.AttrConf(  'alpha_amenities', kwargs.get('alpha_amenities', 0.9),
+                                        #~ groupnames = ['options','zones'], 
+                                        #~ name = 'Amenities transparency', 
+                                        #~ info = 'Transparency of the fill color of amenities. This will apply in the case the facility value is zero.',
+                                        #~ ))
+                                        
+        self.alpha_cmap = attrsman.add(cm.AttrConf(  'alpha_cmap', kwargs.get('alpha_cmap', 0.8),
+                                        groupnames = ['options','zones'], 
+                                        name = 'Color map transparency', 
+                                        info = 'Transparency of the fill colormap for facilities.',
+                                        ))
+                                        
+        self.is_use_landusetype_color_for_bordes = attrsman.add(cm.AttrConf( 'is_use_landusetype_color_for_bordes', kwargs.get('is_use_landusetype_color_for_bordes', True),
+                                        groupnames = ['options'], 
+                                        name = 'Use landtype color', 
+                                        info = 'Use facilities landusetype color for bordes.',
+                                        ))
+                                        
+        self.linewidth_facilityborders = attrsman.add(cm.AttrConf(  'linewidth_facilityborders', kwargs.get('linewidth_facilityborders', 2),
+                                        groupnames = ['options','zones'], 
+                                        name = 'Facility border line width', 
+                                        info = 'Width of the border of facilities.',
+                                        ))
+        
+        self.is_show_id_facility = attrsman.add(cm.AttrConf( 'is_show_id_facility', kwargs.get('is_show_id_facility', False),
+                                        groupnames = ['options'], 
+                                        name = 'Show facility IDs', 
+                                        info = 'Show ID of each facility.',
+                                        ))
+                                        
+        self.is_show_facilityvalues = attrsman.add(cm.AttrConf( 'is_show_facilityvalues', kwargs.get('is_show_facilityvalues', False),
+                                        groupnames = ['options'], 
+                                        name = 'Show facility values', 
+                                        info = 'Show values of each facility. Values depend on the choise of "facilityfillmode"',
+                                        ))
+
+        
+        self.add_networkoptions(**kwargs)                                    
+        #~ self.add_facilityoptions(**kwargs)  
+        self.add_zoneoptions(**kwargs) 
+        self.add_plotoptions_mapbase(**kwargs)
+        self.add_plotoptions_base(**kwargs)
+        self.add_save_options(**kwargs)
+        
+    def show(self):
+		print 'OdPlots.show'
+        #if self.axis  is None:
+		scenario = self.parent.get_scenario()
+		demand = scenario.demand
+		landuse = scenario.landuse
+		virtualpop = self.parent
+		ids_vp = virtualpop.get_ids()
+		households = virtualpop.get_households()
+		ids_hsh = households.get_ids()
+		facilities = scenario.landuse.facilities
+		ids_fac = facilities.get_ids()
+		activities = virtualpop.get_activities()
+        
+#-----------------------Guess facilities and values
+
+        # ~ #Capacities
+		# ~ if self.facilityfillmode == 'capacities':
+			# ~ capacities = {}
+			# ~ for id_fac in ids_fac:
+				# ~ residents[id_fac] = 0
+			# ~ if self.is_specific_facility:
+				# ~ capacities[self.specific_facility] = facilities.capacities[self.specific_facility]
+			# ~ else:
+				# ~ for id_fac in ids_fac:
+					# ~ capacities[id_fac] = facilities.capacities[id_fac]
+
+        #Residents
+		if self.facilityfillmode == 'residents per facility':
+			residents = {}
+			for id_fac in ids_fac:
+				residents[id_fac] = 0
+			if self.is_specific_facility:
+				ids_hsh_fac = ids_hsh[(households.buildings[ids_hsh] == self.specific_facility)]
+				for id_hsh in ids_hsh_fac:
+					residents[self.specific_facility] += households.sizes[id_hsh]
+			else:
+				for id_hsh in ids_hsh:
+					id_fac = households.buildings[id_hsh]
+					residents[id_fac] += households.sizes[id_hsh]
+
+		#Destinations fac
+		if self.facilityfillmode == 'destinations per facility':
+			destinations_fac = {}
+			for id_fac in ids_fac:
+				destinations_fac[id_fac] = 0
+			if self.is_specific_facility:
+				ids_hsh_fac = ids_hsh[(households.buildings[ids_hsh] == self.specific_facility)]
+				vps = []
+				for id_vp in ids_vp:
+					if virtualpop.ids_household[id_vp] in ids_hsh_fac:
+						vps.append(id_vp)
+				ids_vp = vps
+					
+			for id_vp in ids_vp:
+				ids_activity = virtualpop.activitypatterns[id_vp]
+				ids_dest_activity = ids_activity[(activities.ids_activitytype[ids_activity] != demand.activitytypes.names.get_id_from_index('home'))]
+				#filter act
+				#~ print 'ids_activity',ids_activity
+				#~ print 'ids_dest_activity',ids_dest_activity
+				if len(ids_dest_activity) > 0:
+					ids_dest_activity_act = []
+					for id_dest_activity in ids_dest_activity:
+						if activities.ids_activitytype[id_dest_activity] in self.ids_activitytype:
+							ids_dest_activity_act.append(id_dest_activity)
+					#~ print 'ids_dest_activity_act',ids_dest_activity_act
+					if len(ids_dest_activity_act) > 0:
+						#filter land
+						ids_dest_activity_lan = []
+						for id_dest_activity in ids_dest_activity_act:
+							if facilities.ids_landusetype[activities.ids_facility[id_dest_activity]] in self.ids_landusetype:
+								ids_dest_activity_lan.append(id_dest_activity)
+						#~ print 'ids_dest_activity_lan',ids_dest_activity_lan
+						if len(ids_dest_activity_lan) > 0:
+							#filter strategy
+							if self.is_select_strategies:
+								id_plan = virtualpop.ids_plan[id_vp]
+								id_strategy = virtualpop.plans.ids_strategy[id_plan]
+								#~ print 'id_strategy',id_strategy
+								#~ print 'self.ids_strategy',self.ids_strategy
+								if id_strategy in self.ids_strategy:
+									for id_dest_activity in ids_dest_activity_lan:
+										destinations_fac[activities.ids_facility[id_dest_activity]]+=1
+							else:
+								for id_dest_activity in ids_dest_activity_lan:
+									print id_dest_activity
+									destinations_fac[activities.ids_facility[id_dest_activity]]+=1
+		#~ #Destinations act        
+		#~ if self.facilityfillmode == 'destinations per activity':
+			#~ destinations_act = {}
+			#~ for id_fac in ids_fac:
+				#~ destinations_act[id_fac] = 0
+			#~ if self.is_specific_facility:
+				#~ ids_hsh_fac = ids_hsh[(households.buildings[ids_hsh] == self.specific_facility)]
+				#~ ids_vp = ids_vp[(virtualpop.ids_household[ids_vp] in ids_hsh_fac)]
+			#~ for id_vp in ids_vp:
+				#~ ids_activity = virtualpop.activitypatterns[id_vp]
+				#~ ids_dest_activity = ids_activity[(activities.ids_activitytype[ids_activity] in self.ids_activity)]
+				#~ for id_dest_activity in ids_dest_activity:
+					#~ destinations_act[activities.ids_facility[id_dest_activity]]+=1
+		#~ #Destinations lan        
+		#~ if self.facilityfillmode == 'destinations per landuse':
+			#~ destinations_fac = {}
+			#~ for id_fac in ids_fac:
+				#~ destinations_fac[id_fac] = 0
+			#~ if self.is_specific_facility:
+				#~ ids_hsh_fac = ids_hsh[(households.buildings[ids_hsh] == self.specific_facility)]
+				#~ ids_vp = ids_vp[(virtualpop.ids_household[ids_vp] in ids_hsh_fac)]
+			#~ for id_vp in ids_vp:
+				#~ ids_activity = virtualpop.activitypatterns[id_vp]
+				#~ ids_dest_activity = ids_activity[(activities.ids_activitytype[ids_activity] != demand.activitytypes.names.get_id_from_index('home'))]
+
+				#~ for id_dest_activity in ids_dest_activity:
+					#~ if facilities.ids_landusetype[activities.ids_facility[id_dest_activity]] in self.ids_landuse:
+						#~ destinations_lan[activities.ids_facility[id_dest_activity]]+=1
+		#~ #Destinations str        
+		#~ if self.facilityfillmode == 'destinations per strategy':
+			#~ destinations_str = {}
+			#~ for id_fac in ids_fac:
+				#~ destinations_str[id_fac] = 0
+			#~ if self.is_specific_facility:
+				#~ ids_hsh_fac = ids_hsh[(households.buildings[ids_hsh] == self.specific_facility)]
+				#~ ids_vp = ids_vp[(virtualpop.ids_household[ids_vp] in ids_hsh_fac)]
+			#~ for id_vp in ids_vp:
+				#~ id_plan = virtualpop.ids_plan[id_vp]
+				#~ id_strategy = virtualpop.plans.ids_strategy[id_plan]
+				#~ if id_strategy in self.ids_strategy:
+					#~ ids_activity = virtualpop.activitypatterns[id_vp]
+					#~ ids_dest_activity = ids_activity[(activities.ids_activitytype[ids_activity] != demand.activitytypes.names.get_id_from_index('home'))]
+					#~ for id_dest_activity in ids_dest_activity:
+						#~ destinations_str[activities.ids_facility[id_dest_activity]]+=1
+	
+		unit = self.unit_mapscale
+		mapscale =self.get_attrsman().get_config('unit_mapscale').mapscales[unit]
+		ax = init_plot(tight_layout=True)
+		self.plot_net(ax, mapscale=mapscale,  unit = unit, is_configure = False)
+		
+#-----------------------Import facilities and values
+        #['residents per facility', 'destinations per facility', 'destinations per landuse','destinations per strategy', 'destinations per activity']
+		if self.facilityfillmode == 'occupancies':
+			ids_fac = occupancies.keys()
+			values = occupancies.values()
+			if self.is_specific_facility:
+				title = 'Occupancies of facility %i'%(self.specific_facility)
+			else:
+				title = 'Occupancies per facility'
+		
+		if self.facilityfillmode == 'capacities':
+			ids_fac = capacities.keys()
+			values = capacities.values()
+			if self.is_specific_facility:
+				title = 'Capacities of facility %i'%(self.specific_facility)
+			else:
+				title = 'Capacities per facility'
+		
+		if self.facilityfillmode == 'residents per facility':
+			ids_fac = residents.keys()
+			values = residents.values()
+			if self.is_specific_facility:
+				title = 'Residents per residential facility from facility %i'%(self.specific_facility)
+			else:
+				title = 'Residents per residential facility'
+				
+		if self.facilityfillmode == 'destinations per facility':
+			ids_fac = destinations_fac.keys()
+			values = destinations_fac.values()
+			if self.is_specific_facility:
+				title = 'Destinations per facility from facility %i'%(self.specific_facility)
+			else:
+				title = 'Destinations per facility'
+		#~ if self.facilityfillmode == 'destinations per landuse':
+			#~ ids_fac = destinations_lan.keys()
+			#~ values = destinations_lan.values()
+			#~ if self.is_specific_facility:
+				#~ title = 'Destinations per landuse from facility %i'%(self.specific_facility)
+			#~ else:
+				#~ title = 'Destinations per landuse'
+		#~ if self.facilityfillmode == 'destinations per strategy':
+			#~ ids_fac = destinations_str.keys()
+			#~ values = destinations_str.values()
+			#~ if self.is_specific_facility:
+				#~ title = 'Destinations per strategy from facility %i'%(self.specific_facility)
+			#~ else:
+				#~ title = 'Destinations per strategy'
+		#~ if self.facilityfillmode == 'destinations per activity':
+			#~ ids_fac = destinations_act.keys()
+			#~ values = destinations_act.values()
+			#~ if self.is_specific_facility:
+				#~ title = 'Destinations per activity from facility %i'%(self.specific_facility)
+			#~ else:
+				#~ title = 'Destinations per activity'
+            
+
+		ppatches = []
+		edgecolors = []
+		values_positive = []
+#-----------------------Add polygons
+		for id_fac, shape, value  in zip(ids_fac, facilities.shapes[ids_fac], values):
+			
+			if self.is_use_landusetype_color_for_bordes:
+				edge_color = landuse.landusetypes.colors[facilities.ids_landusetype[id_fac]]
+			else:
+				edge_color = 'b'
+            
+			if '_area' in landuse.landusetypes.typekeys[facilities.ids_landusetype[id_fac]]:
+				poly = mpl.patches.Polygon(  np.array(shape)[:,:2]*mapscale, 
+	                                linewidth = self.linewidth_facilityborders,
+	                                edgecolor = edge_color, 
+	                                facecolor = 'w', 
+	                                fill = 'true',
+	                                alpha = 0.2,
+	                                zorder = 0)
+			else:
+				poly = mpl.patches.Polygon(  np.array(shape)[:,:2]*mapscale, 
+	                                linewidth = self.linewidth_facilityborders,
+	                                edgecolor = edge_color, 
+	                                facecolor = 'w', 
+	                                fill = 'true',
+	                                alpha = 0.2,
+	                                zorder = 0)
+			if value >0:
+				edgecolors.append(edge_color)
+				values_positive.append(value)
+				ppatches.append(poly)
+			else:
+				ax.add_patch(poly)
+				
+#-----------------------Fac values +
+			if self.is_show_facilityvalues:
+				if self.is_show_id_facility:
+					text = "ID:%d, val: %d"%(id_fac,value)
+				else:
+					text = "%d"%(value)
+                    
+				ax.text(facilities.centroids[id_fac][0],facilities.centroids[id_fac][1],
+						text,
+						ha='left', va='bottom', 
+						fontsize= int(0.8*self.size_labelfont),
+						#backgroundcolor = 'w',
+						bbox = dict(edgecolor = 'k',facecolor='w', alpha=0.8),
+						zorder = 1000,
+						)  
+                        
+			elif self.is_show_id_facility:
+				ax.text(facilities.centroids[id_fac][0],facilities.centroids[id_fac][1],
+                        "ID:%d"%(id_fac),
+                        ha='left', va='bottom', 
+                        fontsize= int(0.8*self.size_labelfont),
+                        #backgroundcolor = 'w',
+                        bbox = dict(edgecolor = 'k',facecolor='w', alpha=0.8),
+                        zorder = 1000,
+                        )  
+        
+#-----------------------Color map +
+		cmap = mpl.cm.jet
+		patchcollection = PatchCollection(ppatches, cmap = cmap, linewidths = self.linewidth_facilityborders, edgecolors = edgecolors, alpha=self.alpha_cmap)
+		patchcollection.set_array(np.array(values_positive, dtype = np.float32))
+		ax.add_collection(patchcollection)
+		cbar = plt.colorbar(patchcollection)
+		cbar.ax.set_ylabel(self.facilityfillmode)
+		for l in cbar.ax.yaxis.get_ticklabels():
+			#l.set_weight("bold")
+			l.set_fontsize(self.size_labelfont)
+			
+#-----------------------Save
+		if self.title == '':
+			pass
+		else: 
+			title == self.title
+			
+		self.configure_map(ax,title = title, unit = unit) 
+		if self.is_save:
+			plt.subplots_adjust(left=0.12, bottom=0.1, right=0.86, top=0.9, wspace=0.2, hspace=0.2)
+			self.save_fig('activitymap')
+			
+#-----------------------Plot +
+		if not self.is_save:
+			show_plot()
+            
+		return True
+
+    

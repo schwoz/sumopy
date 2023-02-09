@@ -153,7 +153,12 @@ class ObjBrowserMainframe(AgileMainframe):
             info='Save current scenario in a Python binary file.',
             bitmap = wx.ArtProvider.GetBitmap(wx.ART_FILE_SAVE,wx.ART_MENU),
             )
-                
+        
+        self.make_menu_specific()
+            
+    def make_menu_specific(self):
+        """Here we can add App specific main menu items"""
+        pass
         
     
     def on_close(self, event):
@@ -277,16 +282,7 @@ class ObjBrowserApp(wx.App):
     
     """
 
-    def __init__(self, obj,_id=None, output = False, logger = None, **kwargs):
-        if obj is None:
-           obj=cm.BaseObjman('empty')
-        self._obj = obj
-        self._id = _id
-        #print 'ObjBrowserApp.__init__',obj.ident, _id
-        self._logger = logger
-        wx.App.__init__(self, output, **kwargs)
-        
-        
+
 
     def OnInit(self):
     	wx.InitAllImageHandlers()

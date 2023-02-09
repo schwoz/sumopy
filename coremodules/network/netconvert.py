@@ -122,6 +122,14 @@ class NetConvertMixin(CmlMixin,Process):
                         info = 'The default speed on an edge.',
                         is_enabled = lambda self: self.edgespeed_default > 0,
                         ) 
+        #self.add_option('dist_join_tram_edged',kwargs.get('dist_join_tram_edged',-1.0),
+        #                groupnames = ['options','edges'],# 
+        #                cml = '--edges.join-tram-dist',
+        #                perm='rw', 
+        #                name = 'Tram edge join dist.', 
+        #                info = 'When this option is set (values between 1.0 and 2.0 are recommended), overlapping OSM elements, whereby one has Tram access, will be converted to road lanes with shared permissions. Negative value makes ignoring this option.',
+        #                is_enabled = lambda self: self.edgespeed_default > 0,
+        #                ) 
         
         choices_priority = {}
         for i in range(11):
@@ -414,10 +422,10 @@ class NetConvertMixin(CmlMixin,Process):
                         perm='rw', 
                         name = 'Allow entering multilane roundabout', 
                         info = 'Allow driving onto a multi-lane road at roundabouts if there are foes (arriving vehicles) on other lanes.',
-                        is_enabled = lambda self: self.is_roundabouts_guess,
+                        #is_enabled = lambda self: self.is_roundabouts_guess,
                         ) 
                         
-        # --lefthand <BOOL> 	Assumes left-hand traffic on the network; default: false                 
+        # --lefthand <BOOL> Assumes left-hand traffic on the network; default: false                 
         self.add_option('is_no_left_connections',kwargs.get('is_no_left_connections',False),
                         groupnames = ['options','topology'],# 
                         cml = '--no-left-connections',

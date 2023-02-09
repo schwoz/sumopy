@@ -217,7 +217,7 @@ class Scenario(cm.BaseObjman):
         
         
         def _init_attributes(self):
-            print 'Scenario._init_attributes'#,dir(self)
+            #print 'Scenario._init_attributes'#,dir(self)
             
             attrsman = self.get_attrsman()
             self.simulation = attrsman.add(   cm.ObjConf( simulation.Simulation(self) ) )

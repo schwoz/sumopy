@@ -1,6 +1,6 @@
 import numpy as np
 try:
-    from shapely.geometry import MultiPoint, Polygon, Point
+    from shapely.geometry import MultiPoint, Polygon, Point, LineString
     IS_SHAPELY = True                              
 except:
     IS_SHAPELY = False
@@ -258,13 +258,15 @@ def get_dist_point_to_segs(p,y1,x1,y2,x2, is_ending=True,
     where vectors x1, y1 are the first  points and x2,y2 are the second points 
     of the line segments.
     
+    If is_ending is True, then project the distance to 
+    the end-point of the segment, otherwise measure distance to the projection.
+    
     If is_detect_initial is True then a point whose projection is beyond
     the start of the segment will result in a NaN distance.
     
     If is_detect_final is True then a point whose projection is beyond
     the end of the segment will result in a NaN distance.
     
-    If is_return_pos then the position on the section is returned.
     
     Written by Paul Bourke,    October 1988
     http://astronomy.swin.edu.au/~pbourke/geometry/pointline/
@@ -426,12 +428,20 @@ def is_point_in_polygon(point,poly, is_use_shapely = True):
         return False
     
 
-def is_polyline_intersect_polygon(polyline,polygon, is_use_shapely = True):
+def is_polyline_intersect_polygon(polyline,polygon, is_use_shapely = True, is_lineinterpolate = True):
     if IS_SHAPELY & is_use_shapely:
         poly = Polygon(np.array(polygon)[:,:2])
-        return MultiPoint(np.array(polyline)[:,:2]).intersects(poly)
+        if is_lineinterpolate:
+            # requires that any line interpolation between 2 points
+            #  intersects the polygon
+            return LineString(np.array(polyline)[:,:2]).intersects(poly)
+        else:
+            # requires that at least one point is inside the polygon
+            return MultiPoint(np.array(polyline)[:,:2]).intersects(poly)
             
     else: 
+        # WARNING: this dows not work if no point of the polyline
+        # resides within the polygon
         for p in polyline:
             if is_point_in_polygon(p,polygon):
                 return True

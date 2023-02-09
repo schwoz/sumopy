@@ -1483,6 +1483,7 @@ class Netdrawing(OGLdrawing):
         #print 'set_element',element,ident_abs,type(ident_abs)
         #self.print_attrs()
         drawobj = self.get_drawobj_by_ident(ident_drawobj)
+        #print '  drawobj',drawobj,'DrawClass',DrawClass
         if drawobj is not None:
                 drawobj.set_netelement(element)
                 

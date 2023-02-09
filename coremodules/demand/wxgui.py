@@ -284,6 +284,12 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
     def get_neteditor(self):
         return self._mainframe.get_modulegui('coremodules.network').get_neteditor()
 
+    def get_canvas(self):
+        return self.get_neteditor().get_canvas()
+    
+    def get_drawing(self):
+        return self.get_canvas().get_drawing()
+
     def init_widgets(self, mainframe):
         """
         Set mainframe and initialize widgets to various places.
@@ -320,6 +326,7 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         self.refresh_odflow(is_refresh)
         self.refresh_turnflow(is_refresh)        
         self.refresh_pt(is_refresh)  
+        self.refresh_detectorflow(is_refresh)
 
     def make_menu(self):
         #print 'make_menu'
@@ -356,7 +363,8 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
             info='Load default vehicle types, removing all existing vehicle types.',
             #bitmap = self.get_icon("route3_24px.png"),
             )
-            
+        
+        
         #----------------------------------------------------------------------
         self.add_menu_odflows(menubar)
         #----------------------------------------------------------------------
@@ -372,10 +380,10 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
             bitmap = self.get_icon("trip3_24px.png"),
             )  
         
-        #menubar.append_item( 'demand/trips and routes/trips to routes with fastest path',
-        #    self.on_route, 
-        #    bitmap = self.get_icon("route3_24px.png"),
-        #    )
+        menubar.append_item( 'demand/trips and routes/quickroute with fastest path',
+            self.on_route, 
+            bitmap = self.get_icon("route3_24px.png"),
+            )
         #menubar.append_item( 'demand/trips and routes/trips to routes with fastest path, del. disconnected',
         #    self.on_route_del_disconnected, 
         #    bitmap = self.get_icon("route3_24px.png"),
@@ -395,8 +403,12 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         #    self.on_route_congested, 
         #    bitmap = self.get_icon("route3_24px.png"),
         #    )
-                    
-        menubar.append_item( 'demand/trips and routes/export trips to SUMO xml...',
+        
+        menubar.append_item( 'demand/trips and routes/generate taxi trips...',
+            self.on_generate_taxitrips, 
+            )
+                        
+        menubar.append_item( 'demand/trips and routes/export trips to SUMO trip.xml...',
             self.on_export_sumotrips, 
             info='Export all trips to SUMO XML format.',
             bitmap = self.get_agileicon("Document_Export_24px.png"),
@@ -408,17 +420,26 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         #    bitmap = self.get_agileicon("Document_Export_24px.png"),
         #    ) 
 
-        menubar.append_item( 'demand/trips and routes/import trips from SUMO xml...',
+        menubar.append_item( 'demand/trips and routes/import trips from SUMO trip.xml...',
             self.on_import_trips_xml, 
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             ) 
-        
-        menubar.append_item( 'demand/trips and routes/import trips with routes from SUMO xml...',
+        menubar.append_item( 'demand/trips and routes/import routes with trips from SUMO rou.xml...',
+            self.on_import_routes_xml, 
+            bitmap = self.get_agileicon("Document_Import_24px.png"),
+            )
+        menubar.append_item( 'demand/trips and routes/import trips with routes from SUMO trip.xml...',
             self.on_import_triproutes_xml, 
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             ) 
         
-        menubar.append_item( 'demand/trips and routes/import routes to existing trips from SUMO xml...',
+        
+        menubar.append_item( 'demand/trips and routes/import and overwrite routes of existing trips from SUMO xml...',
+            self.on_import_routes_overwrite_xml, 
+            bitmap = self.get_agileicon("Document_Import_24px.png"),
+            )
+            
+        menubar.append_item( 'demand/trips and routes/import and add routes to existing trips from SUMO xml...',
             self.on_import_routes_alternative_xml, 
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             )
@@ -430,6 +451,8 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
 ##            bitmap = self.get_agileicon("Document_Import_24px.png"),
             )
         
+        
+            
         menubar.append_item( 'demand/trips and routes/clear all trips and routes',
             self.on_clear_trips, 
             info='Clear all trips with respective routes.',
@@ -462,7 +485,15 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
             self.on_update_all_sumoroutes,
             info='Update all routes available in the demand database from SUMO XML format. Note that no new routes are going to be imported.',
             bitmap = self.get_agileicon("Document_Import_24px.png"),
-            )  
+            ) 
+        
+        menubar.append_item( 'demand/update with fastest route alternatives from SUMO xml...',
+            self.on_update_all_sumoroutes_alternatives,
+            bitmap = self.get_agileicon("Document_Import_24px.png"),
+            )
+            
+        
+            
 ##        (self._menuitem_draw_route, id_item,) = menubar.append_item(
 ##            'plugins/traces/draw selected route in network', 
 ##            self.on_renew_objectbrowser, 
@@ -476,7 +507,30 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
 ##            info='Enable adding of routes to graphics in trace tab. Double-click on trace in table.',
 ##            check=True)
 ##        self._menuitem_plot_route.Check(False)
+    
+    def on_import_routes_xml(self, event = None):
+        """
+        Import trips with routes from a sumo route xml file. Trips will be added, not substituted or updated.
+        """
+        print 'on_import_routes_xml**'
+        filepath = self._demand.get_routefilepath()
+        # defaultFile =  = os.path.basename(filepath)
+        dirpath = os.path.dirname(filepath)
+        wildcards_all = 'XML route files (*rou.xml)|*rou.xml|All files (*.*)|*.*'
+        dlg = wx.FileDialog(None, message='Update all routes from SUMO xml', 
+                            defaultDir=dirpath, 
+                            ## defaultFile = =# defaultFile = , 
+                            wildcard=wildcards_all, style=wx.OPEN | wx.CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filepath = dlg.GetPath()
+
+        else:
+            return 
         
+        self._demand.trips.import_routes_xml( filepath,  is_clear_trips = False,
+                            is_generate_ids = True, is_add = False,
+                            is_overwrite_only = False)
+          
     def on_clear_vtypes(self, event=None):
         self._demand.vtypes.clear_vtypes()
         self._mainframe.browse_obj(self._demand.vtypes)
@@ -507,12 +561,12 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         
     
                       
-    #def on_route(self, event=None):
-    #    """Generates routes from current trip info. Uses a python implementation of a fastest path router.
-    #    """
-    #    #self._demand.trips.clear_routes()
-    #    self._demand.trips.route()
-    #    self._mainframe.browse_obj(self._demand.trips)
+    def on_route(self, event=None):
+        """Generates routes from current trip info. Uses a python implementation of a fastest path router.
+        """
+        #self._demand.trips.clear_routes()
+        self._demand.trips.route(is_set_current = True)
+        self._mainframe.browse_obj(self._demand.trips)
         
     #def on_route_del_disconnected(self, event=None):
     #    """Generates routes from current trip info and deletes disconnected trips. Uses a python implementation of a fastest path router.
@@ -527,7 +581,31 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         #self._demand.trips.clear_routes()
         self._demand.trips.duaroute(is_export_net = True, is_export_trips = True)
         self._mainframe.browse_obj(self._demand.trips)
+    
+    def on_generate_taxitrips(self, event=None):
+        """Stochastic traffic assignment with duarouter.
+        """
+ 
+                    
+        obj = demand.TaxiGenerator(    self._demand, 
+                                logger = self._mainframe.get_logger())
         
+        
+        dlg = ProcessDialog(self._mainframe, obj)
+                         
+        dlg.CenterOnScreen()
+    
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+
+        if dlg.get_status() == 'success':
+            dlg.apply()
+            dlg.Destroy()
+            
+            self._mainframe.browse_obj(self._demand.trips)
+                
     def on_duaroute_stochastic(self, event=None):
         """Stochastic traffic assignment with duarouter.
         """
@@ -627,10 +705,36 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
         self._mainframe.browse_obj(self._demand.trips)
     
         
-                                  
+    
+    def on_import_routes_overwrite_xml(self, event = None):
+        """Select xml file and import routes. 
+        Overwrite current routes of existing trips. 
+        """
+        filepath = self._demand.trips.get_routefilepath()
+        # defaultFile =  = os.path.dirname(filepath)
+        dirpath = os.path.dirname(filepath)
+        wildcards_all = 'XML route files (*.rou.xml)|*.rou.xml|All files (*.*)|*.*'
+        dlg = wx.FileDialog(None, message='Import trips and routes from SUMO xml', 
+                            defaultDir=dirpath, 
+                            ## defaultFile = =# defaultFile = , 
+                            wildcard=wildcards_all, style=wx.OPEN | wx.CHANGE_DIR
+                            )
+                            
+        if dlg.ShowModal() == wx.ID_OK:
+            filepath = dlg.GetPath()
+
+        else:
+            return 
+        
+        self._demand.trips.import_routes_xml(filepath,is_clear_trips = False, 
+                                                is_overwrite_only = True,
+                                                is_generate_ids = False,
+                                                is_add = False)
+        self._mainframe.browse_obj(self._demand.trips)
+                                      
     def on_import_routes_alternative_xml(self, event = None):
         """Select xml file and import routes. 
-        Routes will added as route alternative to existing trips. 
+        Add routes as alternative of existing trips. 
         """
         filepath = self._demand.trips.get_routefilepath()
         # defaultFile =  = os.path.dirname(filepath)
@@ -758,6 +862,30 @@ class WxGui(    turnflowsgui.TurnflowWxGuiMixin,
             return 
         
         self._demand.export_routes_xml(filepath)
+        
+        
+    def on_update_all_sumoroutes_alternatives(self, event = None):
+        """
+        Update routes from SUMO route alternative file
+        """
+        #print 'on_export_sumotrips'
+        filepath = self._demand.get_routefilepath()
+        # defaultFile =  = os.path.basename(filepath)
+        dirpath = os.path.dirname(filepath)
+        wildcards_all = 'XML files (*.xml)|*.xml|All files (*.*)|*.*'
+        dlg = wx.FileDialog(None, message='Update all routes from route dists SUMO xml', 
+                            defaultDir=dirpath, 
+                            ## defaultFile = =# defaultFile = , 
+                            wildcard=wildcards_all, style=wx.OPEN | wx.CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filepath = dlg.GetPath()
+
+        else:
+            return 
+        
+        self._demand.import_routealternatives_xml(filepath, is_fastest = True)
+
+
 
     def on_update_all_sumoroutes(self, event = None):
         #print 'on_export_sumotrips'

@@ -21,6 +21,7 @@ import agilepy.lib_base.classman as cm
 import agilepy.lib_base.arrayman as am
 import agilepy.lib_base.xmlman as xm
 from agilepy.lib_base.misc import get_inversemap
+from agilepy.lib_base.processes import Process
 
 #from agilepy.lib_base.geometry import find_area
 #from agilepy.lib_base.processes import Process,CmlMixin,ff,call
@@ -46,7 +47,7 @@ except:
 
 class Demand(cm.BaseObjman):
         def __init__(self, scenario=None, net = None, zones = None, name = 'Demand', info ='Transport demand', **kwargs):
-            print 'Demand.__init__',name,kwargs
+            #print 'Demand.__init__',name,kwargs
 
             # we need a network from somewhere
             if net is None:
@@ -81,7 +82,7 @@ class Demand(cm.BaseObjman):
             attrsman = self.get_attrsman()
 
             scenario = self.parent
-            print 'Demand._init_attributes',scenario
+            #print 'Demand._init_attributes',scenario
 
             if scenario  is not None:
                 self.detectorflows = attrsman.add( cm.ObjConf(  detectorflows.Detectorflows('detectorflows',self),
@@ -204,11 +205,40 @@ class Demand(cm.BaseObjman):
             #self._demandobjects.discard(demandobject)
             self.get_attrsman().delete(demandobject.ident)
 
-        
+        def import_routealternatives_xml(self, filepath=None, demandobjects = None, 
+                                            **kwargs
+                                            ):
+            """Imports alternative routes from SUMO rou xml file
+            demandobjects: list of demand objects for which routes are read.
+                           If None, routes are read into all demand objects 
+            is_fastest: If true import fastest route and replace current route.
+            """
+            if demandobjects is None:
+                demandobjects = self.get_demandobjects()
+                
+            try:
+                fd = open(filepath,'r')
+                fd.close()
+            except:
+                print 'WARNING in import_routes_xml: could not open',filepath
+                return False
+                
+            for demandobj in demandobjects:
+                print '   try to import alt routes from demandobj',demandobj
+                demandobj.import_routealternatives_xml(filepath, **kwargs)
+                                                    
+            return True                                        
+            
         def import_routes_xml(self, filepath=None, demandobjects = None, 
                                 is_clear_trips = False, is_generate_ids = False, 
                                 is_overwrite_only = True):
-            
+            """Imports routes from SUMO rou xml file
+            demandobjects: list of demand objects for which routes are read.
+                           If None, routes are read into all demand objects 
+            is_clear_trips: If True, clear all trips
+            is_generate_ids: If True, generate new trip IDs
+            is_overwrite_only: overwrite current route of existing trips
+            """
             if demandobjects is None:
                 demandobjects = self.get_demandobjects()
 
@@ -219,6 +249,7 @@ class Demand(cm.BaseObjman):
             print 'import_routes_xml',filepath,demandobjects
             try:
                 fd = open(filepath,'r')
+                fd.close()
             except:
                 print 'WARNING in import_routes_xml: could not open',filepath
                 return False
@@ -231,11 +262,19 @@ class Demand(cm.BaseObjman):
                                                     is_overwrite_only = is_overwrite_only)
                                                     
             return True                                        
+        
+        def set_routes_sumo(self, ids_veh_sumo, ids_edges_sumo, demandobjects = None):
+            if demandobjects is None:
+                demandobjects = self.get_demandobjects()
+            for demandobj in demandobjects:
+                print '  set route for demandobj',demandobj    
+                demandobj.set_routes_sumo(ids_veh_sumo, ids_edges_sumo)
                                                         
         def export_routes_xml(  self, filepath=None, encoding = 'UTF-8',
                                 demandobjects = None, is_route = True,
                                 vtypeattrs_excluded = [],
-                                is_plain = False):
+                                is_plain = False,
+                                is_exclude_pedestrians = False,):
             """
             Export routes available from the demand  to SUMO xml file.
             Method takes care of sorting trips by departure time.
@@ -271,7 +310,8 @@ class Demand(cm.BaseObjman):
             for exportobj in demandobjects:
                 print '  exportobj',exportobj
                 times, funcs, ids = exportobj.get_writexmlinfo( is_route=is_route, 
-                                                                is_plain = is_plain)
+                                                                is_plain = is_plain,
+                                                                is_exclude_pedestrians = is_exclude_pedestrians)
                 print '    n_trips',len(times),'has vtypes',hasattr(exportobj,'get_vtypes')
                 if len(times)>0:
                     times_begin = np.concatenate((times_begin, times),0)
@@ -311,7 +351,17 @@ class Demand(cm.BaseObjman):
             fd.close()
             return filepath
 
-
+        def get_ids_vtype(self):
+            ids_vtype = set()
+            for exportobj in demandobjects:
+                if hasattr(exportobj,'get_vtypes'):
+                    # TODO:all export objects have get_vtypes except mapmatching
+                    ids_vtype.update(exportobj.get_vtypes())
+            return list(ids_vtype)
+        
+        def get_ids_mode(self):
+            return list(set(self.get_vtypes().ids_mode[self.get_ids_vtype()]))
+            
         def import_xml(self, rootname, dirname=''):
             """
             Import trips and/or routes, if available.
@@ -600,7 +650,7 @@ class Trips(DemandobjMixin, am.ArrayObjman):
         self.routes.get_value().del_rows(ids_route_del)
         
     def get_id_from_id_sumo(self, id_veh_sumo):
-        print 'get_id_from_id_sumo',id_veh_sumo,len(id_veh_sumo.split('.')) == 1
+        #print 'get_id_from_id_sumo',id_veh_sumo,len(id_veh_sumo.split('.')) == 1
         if len(id_veh_sumo.split('.')) == 1:
             return int(id_veh_sumo)
         return -1
@@ -691,11 +741,11 @@ class Trips(DemandobjMixin, am.ArrayObjman):
     def get_vtypes(self):
         return set(self.ids_vtype.get_value())
 
-    def route(self, is_check_lanes = True, is_del_disconnected = False):
+    def route(self, is_check_lanes = True, is_del_disconnected = False, is_set_current = False):
         """
         Fastest path python router.
         """
-        print 'route'
+        print 'route is_check_lanes',is_check_lanes
         # TODO: if too mant vtypes, better go through id_modes
         exectime_start = time.clock()
 
@@ -709,21 +759,24 @@ class Trips(DemandobjMixin, am.ArrayObjman):
 
         ids_trip_disconnected = []
 
-        fstar = edges.get_fstar()
+        
         for id_vtype in self.get_vtypes():
             id_mode = vtypes.ids_mode[id_vtype]
 
             # no routing for pedestrians
             if id_mode != net.modes.get_id_mode('pedestrian'):
+                ids_trip_vtype = self.get_trips_for_vtype(id_vtype)
+                print '  id_vtype, id_mode',id_vtype,id_mode#,ids_trip_vtype
+                
                 weights = edges.get_times(  id_mode = id_mode,
                                             speed_max = vtypes.speeds_max[id_vtype],
                                             is_check_lanes = is_check_lanes,
                                             modeconst_excl = -10.0, modeconst_mix = -5.0,
                                             )
-
-
-                ids_trip_vtype = self.get_trips_for_vtype(id_vtype)
-                #print '  id_vtype,id_mode',id_vtype,id_mode#,ids_trip_vtype
+                
+                fstar = edges.get_fstar(id_mode = id_mode)
+                
+                
                 ids_alledges = edges.get_ids()
                 #for id_edge,id_edge_sumo, weight in zip(ids_alledges,edges.ids_sumo[ids_alledges],weights[ids_alledges]):
                 #    print '  id_edge',id_edge,id_edge_sumo,'weight',weights[id_edge_sumo]
@@ -737,10 +790,10 @@ class Trips(DemandobjMixin, am.ArrayObjman):
                                                                         weights= weights,
                                                                         fstar = fstar)
                     
-                    if 1:#id_trip == 627:
-                        print '    id_trip',id_trip,'id_edge_depart',id_edge_depart,'id_edge_arrival',id_edge_arrival
-                        print '       route',route
-                        print '       ids_sumo',edges.ids_sumo[route]
+                    #if id_trip == 1:
+                    #    print '    id_trip',id_trip,'id_edge_depart',id_edge_depart,'id_edge_arrival',id_edge_arrival
+                    #    print '       route',route
+                    #    print '       ids_sumo',edges.ids_sumo[route]
                     if len(route)>0:
                         ids_edges.append(route)
                         ids_trip.append(id_trip)
@@ -753,7 +806,11 @@ class Trips(DemandobjMixin, am.ArrayObjman):
                                                         ids_edges = ids_edges,
                                                         costs = costs,
                                                         )
-        self.add_routes(ids_trip, ids_route)
+        if is_set_current:
+            self.ids_route_current[ids_trip] = ids_route
+        else:
+            self.add_routes(ids_trip, ids_route)
+        
         print '  exectime',time.clock()-exectime_start
 
         if is_del_disconnected:
@@ -1015,8 +1072,66 @@ class Trips(DemandobjMixin, am.ArrayObjman):
             self.ids_sumo[ids_trip] = kwargs.get('ids_sumo',np.array(ids_trip,np.str))
         return ids_trip
 
+    def add_returntrips(self, timedelay, ids_trip = None):
+        """Create return trips for ids_trip or for all trips if ids_trip = None.
+        The timedelay is added to the departure time of all return trips.
+        """
+        if ids_trip is None:
+            ids_trip = self.get_ids()
+        
+        return self.make_trips( ids_vtype = self.ids_vtype[ids_trip], is_generate_ids = True, 
+                                times_depart = self.times_depart[ids_trip] + timedelay,
+                                ids_edge_depart = self.ids_edge_arrival[ids_trip],# return!
+                                ids_edge_arrival = self.ids_edge_depart[ids_trip],# return!
+                                inds_lane_depart = self.inds_lane_depart[ids_trip],
+                                positions_depart = self.positions_depart[ids_trip],
+                                speeds_depart = self.speeds_depart[ids_trip],
+                                inds_lane_arrival = self.inds_lane_arrival[ids_trip],
+                                positions_arrival = self.positions_arrival[ids_trip],
+                                speeds_arrival = self.speeds_arrival[ids_trip],
+                               )
+    def set_routes_sumo(self, ids_veh_sumo, ids_edges_sumo):
+        """
+        Sets already existing routes.
+        Keys are an array with SUMO IDs of the vehicles.
+        Routes are represented as an array of lists of SUMO edge IDs
+        """
+        print 'Trips.set_routes_sumo ',len(ids_veh_sumo)
+        routes = self.get_routes()
+        get_ids_from_indices = self.get_scenario().net.edges.ids_sumo.get_ids_from_indices
+        
+        edges = self.get_scenario().net.edges
+        n_rerouted = 0
+        for id_veh_sumo, ids_edge_sumo in zip(ids_veh_sumo, ids_edges_sumo):
+            id_veh = self.get_id_from_id_sumo(id_veh_sumo)
+            if id_veh != -1:
+                ids_edge_old = routes.ids_edges[self.ids_route_current[id_veh]]
+                ids_edge_new = get_ids_from_indices(ids_edge_sumo)
+                is_reroute = ids_edge_old != ids_edge_new
+                n_rerouted += is_reroute
+                #print '  set route id_veh',id_veh,'id_route',self.ids_route_current[id_veh],'before',routes.ids_edges[self.ids_route_current[id_veh]] 
+                if is_reroute:
+                    routes.ids_edges[self.ids_route_current[id_veh]] = get_ids_from_indices(ids_edge_sumo)
+                #print '      after',routes.ids_edges[self.ids_route_current[id_veh]],edges.ids_sumo[routes.ids_edges[self.ids_route_current[id_veh]]] 
+                if is_reroute:
+                    print 'rerouted id_veh',id_veh,'starting at',self.times_depart[id_veh]
+                else:
+                    print 'maintain id_veh',id_veh,'starting at',self.times_depart[id_veh]
+                    #print '         route',edges.ids_sumo[ids_edge_new]
+    
     def make_routes(self, ids_vtype, is_generate_ids = True, routes = None, ids_trip=None, is_add = True, **kwargs):
-        print 'make_routes is_generate_ids',is_generate_ids,'is_add',is_add,'ids_trip provided',ids_trip is None
+        """Generates or sets routes of trips, generates also trips if necessary
+        ids_trip: trip IDs, 
+                    if None then trip ID and route ID will be generated for each given route
+                    if a list then routes will be associated with these trip IDs and routes will be replaced
+                    but generated if route ID does not exist for given trip ID 
+        is_add: if True then routes are added to the alternative route list
+                if False then current routes will be set
+        
+        is_generate_ids: depricated, fully controlled by ids_trip
+        """
+        is_generate_ids = ids_trip is None
+        print 'make_routes is_generate_ids',is_generate_ids,'is_add',is_add
         #print '  ids_trip',ids_trip
         
         
@@ -1026,27 +1141,37 @@ class Trips(DemandobjMixin, am.ArrayObjman):
             ids_trip=self.make_trips(ids_vtype, is_generate_ids =is_generate_ids,  **kwargs)
             is_generate_ids = True
         else:
-            print '  replace current route and create if not existent'
-            ids_routes = self.ids_route_current[ids_trip]
-            inds_new = np.flatnonzero(ids_routes == -1)
-            #print '  inds_new',inds_new
-            if len(inds_new)>0:
-                print '  complete %d non pre-existant route ids of %d trips'%(len(inds_new),len(ids_trip))
-                # create new routes
-                ids_routes[inds_new] = self.routes.get_value().add_rows(  n = len(inds_new),
-                                                                ids_trip = ids_trip[inds_new],
-                                                                #ids_edges = routes[inds_new],
-                                                            )
-                
+            if not is_add:
+                print '  replace current route and create if not existent'
+                ids_routes = self.ids_route_current[ids_trip]
+                inds_new = np.flatnonzero(ids_routes == -1)
+                #print '  inds_new',inds_new
+                if len(inds_new)>0:
+                    print '  complete %d non pre-existant route ids of %d trips'%(len(inds_new),len(ids_trip))
+                    # create new routes
+                    ids_routes[inds_new] = self.routes.get_value().add_rows(  n = len(inds_new),
+                                                                    ids_trip = ids_trip[inds_new],
+                                                                    #ids_edges = routes[inds_new],
+                                                                )
+                else:
+                    print '  all new routes have pre-existing routes'    
+            else:
+                # make new route IDs
+                ids_routes = self.routes.get_value().add_rows(  n = len(ids_trip),
+                                                                    ids_trip = ids_trip,
+                                                                    #ids_edges = routes[inds_new],# later!!
+                                                                )
+                                                                
             is_generate_ids = False
+            print '  set new routes to routes database',len(ids_routes),'routes set'
             self.routes.get_value().ids_edges[ids_routes] = routes
             
             if not is_add:
-                print '  replace current route IDs'
+                print '  replace current route IDs',len(inds_new),'routes replaced'
                 self.ids_route_current[ids_trip[inds_new]] = ids_routes[inds_new]
             else:
-                print '  add new route IDs to alternatives'
-                self.add_routes(ids_trip[inds_new], ids_routes[inds_new])
+                print '  add new route IDs to alternatives',len(ids_trip),'routes added'
+                self.add_routes(ids_trip, ids_routes)
             
             #if np.any(ids_routes == -1):
             #    is_generate_ids = True
@@ -1160,7 +1285,7 @@ class Trips(DemandobjMixin, am.ArrayObjman):
         # returns trip object, method common to all demand objects
         return self
 
-    def get_writexmlinfo(self, is_route=False, **kwargs):
+    def get_writexmlinfo(self, is_route=False, is_exclude_pedestrians = False, **kwargs):
         """
         Returns three array where the first array is the
         begin time of the first vehicle and the second array is the
@@ -1169,26 +1294,46 @@ class Trips(DemandobjMixin, am.ArrayObjman):
 
         Method used to sort trips when exporting to route or trip xml file
         """
-        n = len(self)
+        
         ids = self.get_ids()
-
-        # define different route write functions for pedestriand and vehicles
-        writefuncs = np.zeros(n, dtype = np.object)
-        inds_ped = self.parent.vtypes.ids_mode[self.ids_vtype[ids]] == MODES['pedestrian']
-        writefuncs[inds_ped] = self.write_persontrip_xml
-        if is_route:
-            writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]>-1)] = self.write_vehroute_xml
-            
-            # vehicles must have a route, this makes sure that OD are connected
-            writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]==-1)] = self.write_missingroute_xml
+        
+        if not is_exclude_pedestrians:
+            # define different route write functions for pedestriand and vehicles
+            n = len(ids)
+            writefuncs = np.zeros(n, dtype = np.object)
+            inds_ped = self.parent.vtypes.ids_mode[self.ids_vtype[ids]] == MODES['pedestrian']
+            writefuncs[inds_ped] = self.write_persontrip_xml
+            if is_route:
+                writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]>-1)] = self.write_vehroute_xml
+                
+                # vehicles must have a route, this makes sure that OD are connected
+                writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]==-1)] = self.write_missingroute_xml
+            else:
+                # here we write vehicle trip, without explicit route export
+                # routing will be performed during simulation
+                writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]>-1)] = self.write_vehtrip_xml
+                
+                # vehicles must have a route, this makes sure that OD are connected
+                writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]==-1)] = self.write_missingroute_xml
         else:
-            # here we write vehicle trip, without explicit route export
-            # routing will be performed during simulation
-            writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]>-1)] = self.write_vehtrip_xml
+            # only  vehicle types without peds
+            inds_noped = self.parent.vtypes.ids_mode[self.ids_vtype[ids]] != MODES['pedestrian']
+            ids = ids[inds_noped]
+            n = len(ids)
+            writefuncs = np.zeros(n, dtype = np.object)
+            if is_route:
+                writefuncs[ self.ids_route_current[ids]>-1] = self.write_vehroute_xml
+                
+                # vehicles must have a route, this makes sure that OD are connected
+                writefuncs[self.ids_route_current[ids]==-1] = self.write_missingroute_xml
+            else:
+                # here we write vehicle trip, without explicit route export
+                # routing will be performed during simulation
+                writefuncs[self.ids_route_current[ids]>-1] = self.write_vehtrip_xml
+                
+                # vehicles must have a route, this makes sure that OD are connected
+                writefuncs[self.ids_route_current[ids]==-1] = self.write_missingroute_xml
             
-            # vehicles must have a route, this makes sure that OD are connected
-            writefuncs[np.logical_not(inds_ped)& (self.ids_route_current[ids]==-1)] = self.write_missingroute_xml
-
         return self.times_depart[ids], writefuncs, ids
 
     def write_missingroute_xml(self, fd, id_trip, time_begin, indent = 2):
@@ -1308,11 +1453,40 @@ class Trips(DemandobjMixin, am.ArrayObjman):
             return -1 # no route found
 
 
-
+    def import_routealternatives_xml(self, filepath=None, demandobjects = None, 
+                                            is_fastest = True, is_add = False,
+                                            ):
+        """Imports alternative routes from SUMO rou xml file
+        demandobjects: list of demand objects for which routes are read.
+                       If None, routes are read into all demand objects 
+        is_fastest: If true import fastest route and replace current route.
+        """
+        print 'import_routes_xml from %s add trips %s'%(filepath,is_add)
+        
+        counter = RouteCounter()
+        parse(filepath, counter)
+        reader = RouteAlternativesReader(self, counter)
+        if 1:
+            parse(filepath, reader)
+            #print '  call insert_routes  is_add',is_add
+            reader.insert_routes(is_fastest =is_fastest, is_add = is_add)
+            
+        #except KeyError:
+        #    print >> sys.stderr, "Error: Problems with reading routes!"
+        #    raise
+    
     def import_routes_xml(self, filepath,  is_clear_trips = False,
                             is_generate_ids = True, is_add = False,
                             is_overwrite_only = False):
-        print 'import_routes_xml from %s generate new routes %s, clear trips %s'%(filepath,is_generate_ids,is_clear_trips)
+        """
+        Imports routes from SUMO rou xml file
+        
+        is_clear_trips: If True, clear all trips
+        is_generate_ids: If True, generate new trip IDs
+        is_add: Add routes to route alternatives of existing trips
+        is_overwrite_only: overwrite current route of existing trips
+        """
+        print 'import_routes_xml from %s generate new routes %s, clear trips %s add trips %s'%(filepath,is_generate_ids,is_clear_trips,is_add)
         if is_clear_trips:
             self.clear_trips()
 
@@ -1321,9 +1495,9 @@ class Trips(DemandobjMixin, am.ArrayObjman):
         reader = RouteReader(self, counter)
         try:
             parse(filepath, reader)
-            #print '  call make_routes',is_generate_ids,is_add
+            print '  call insert_routes is_generate_ids',is_generate_ids, 'is_add',is_add,'is_overwrite_only',is_overwrite_only
             reader.insert_routes(is_generate_ids = is_generate_ids,
-                                    is_add=is_add,is_overwrite_only = is_overwrite_only)
+                                    is_add=is_add, is_overwrite_only = is_overwrite_only)
         except KeyError:
             print >> sys.stderr, "Error: Problems with reading routes!"
             raise
@@ -1360,7 +1534,276 @@ class Trips(DemandobjMixin, am.ArrayObjman):
     def process_results(self, results, process = None):
         pass
 
+class TaxiGenerator(Process):
+    def __init__(self, demand, logger = None,**kwargs):
+        
+        self._init_common(  'taxigenerator', name = 'Taxi generator', 
+                            parent = demand,
+                            logger = logger,
+                            info ='Generates taxi trips on specific zones.',
+                            )
+   
+        
+        attrsman = self.get_attrsman()
+        scenario = self.parent.get_scenario()
+        zones = scenario.landuse.zones
+        
+        
+        self.n_taxi = attrsman.add(cm.AttrConf(  'n_taxi', 100,
+                                    groupnames = ['options'], 
+                                    name = 'Number of taxi',
+                                    info = "Number of taxis to be generated.",
+                                    )) 
+        
+        self.priority_max = attrsman.add(cm.AttrConf( 'priority_max', 8,
+                                                groupnames = ['options'],
+                                                name = 'Max. edge priority',
+                                                perm = 'rw',
+                                                info = "Maximum edge priority for which edges in a zone are considered departure or arrival edges.",
+                                                ))
+        
+        self.speed_max = attrsman.add(cm.AttrConf( 'speed_max', 14.0,
+                                                groupnames = ['options'],
+                                                name = 'Max. edge speed',
+                                                perm = 'rw',
+                                                unit = 'm/s',
+                                                info = "Maximum edge speed for which edges in a zone are considered departure or arrival edges.",
+                                                ))
+        
+        
+        time_start = self.parent.get_time_depart_first()
+        
 
+
+        self.time_start = attrsman.add(cm.AttrConf( 'time_start', kwargs.get('time_start',time_start),
+                                                groupnames = ['options','timing'],
+                                                name = 'Start time',
+                                                perm = 'rw',
+                                                info = 'Start time when first taxi appears, in seconds after midnight.',
+                                                unit = 's',
+                                                ))
+
+        # default is to insert all taxis within the first 60s
+        self.time_end = attrsman.add(cm.AttrConf( 'time_end', kwargs.get('time_end',time_start+60.0),
+                                                groupnames = ['options','timing'],
+                                                name = 'End time',
+                                                perm = 'rw',
+                                                info = 'Time when last taxi appears in seconds after midnight.',
+                                                unit = 's',
+                                                ))
+                                                 
+        #self.n_edges_min_length = attrsman.add(cm.AttrConf( 'n_edges_min_length', 1,
+        #                                        groupnames = ['options'],
+        #                                        name = 'Min. edge number length prob.',
+        #                                        perm = 'rw',
+        #                                        info = "Minimum number of edges for with the departure/arrival probability is proportional to the edge length.",
+        #                                        ))
+        
+        #self.n_edges_max_length = attrsman.add(cm.AttrConf( 'n_edges_max_length', 500,
+        #                                        groupnames = ['options'],
+        #                                        name = 'Max. edge number length prob.',
+        #                                        perm = 'rw',
+        #                                        info = "Maximum number of edges for with the departure/arrival probability is proportional to the edge length.",
+        #                                        ))
+                                                
+                                
+        self.is_selected_zones = attrsman.add(cm.AttrConf(  'is_selected_zones', False,
+                                    groupnames = ['options'], 
+                                    name = 'Selected zones',
+                                    info = "Place taxis only on edges of specified zone list.",
+                                    )) 
+        
+        ids_zone = zones.get_ids()
+        zonechoices = {}
+        for id_zone, name_zone in zip(ids_zone, zones.ids_sumo[ids_zone]):
+              zonechoices[name_zone] = id_zone
+        #print '  zonechoices',zonechoices
+        #make for each possible pattern a field for prob
+        #if len(zonechoices) > 0:
+        self.ids_zone = attrsman.add(cm.ListConf('ids_zone',[], 
+                                                  groupnames = ['options'], 
+                                                  choices = zonechoices,
+                                                  name = 'Zones', 
+                                                  info = """Zones where to place taxis. Taxis are distributed proportional to road lengths in zones.""",
+                                                  ))   
+        
+        
+        #self.is_refresh_zoneedges = attrsman.add(am.AttrConf(  'is_refresh_zoneedges', True,
+        #                            groupnames = ['options'],
+        #                            perm='rw', 
+        #                            name = 'Refresh zone edges', 
+        #                            info = """Identify all edges in all zones before generating the trips. 
+        #                                      Dependent on the  will take some time.""",
+        #                            ))
+        
+    #def _get_edgeweights(self, ids_edge, n_edges_min_length, n_edges_max_length, priority_max, speed_max):
+    #    #print 'get_edgeweights ids_edge',ids_edge
+    #    edges = self.get_edges()
+    #    n_edges = len(ids_edge)
+    #    if (n_edges > n_edges_min_length)&(n_edges < n_edges_max_length):
+    #        return edges.lengths[ids_edge]*((edges.priorities[ids_edge]<priority_max) & (edges.speeds_max[ids_edge] < speed_max))
+    #    else:
+    #        return np.ones(n_edges,dtype = np.float32)*((edges.priorities[ids_edge]<priority_max) & (edges.speeds_max[ids_edge] < speed_max))
+    
+    
+    def generate_taxi(self):
+        """
+        Generate taxis as trips in the trip database. 
+        """
+        tripnumber = self.n_taxi
+        time_start = self.time_start
+        time_end= self.time_end
+        id_mode_ped = MODES['pedestrian']
+        id_mode_taxi = MODES['taxi']
+        scenario = self.parent.get_scenario()
+        zones = scenario.landuse.zones
+        trips = scenario.demand.trips
+        edges = scenario.net.edges
+        edgelengths = edges.lengths
+        
+        # define taxi and secondary mode, if appropriate
+        ids_vtype_mode_taxi, prob_vtype_mode_taxi = scenario.demand.vtypes.select_by_mode(
+            id_mode_taxi, is_share = True)
+        
+        #print '  ids_vtype_mode', ids_vtype_mode
+        n_vtypes_taxi = len(ids_vtype_mode_taxi)
+        
+        if self.is_selected_zones:
+            ids_zone = self.ids_zone
+        else:
+            ids_zone = zones.get_ids()
+     
+               
+        fstar = edges.get_fstar(is_ignor_connections=False)
+        times_taxi = edges.get_times(id_mode=id_mode_taxi, is_check_lanes=True)
+  
+        n_trips_generated = 0
+        n_trips_failed = 0
+
+        if self.is_selected_zones:
+            # tale selected zones
+            ids_zone = self.ids_zone
+        else:
+            # take all zones
+            ids_zone = zones.get_ids()
+        
+        ids_edges_orig = [] #all accessible edges in all zones
+        n_edges_orig = 0
+        for id_zone in ids_zone:
+            #id_orig = self.ids_orig[id_od]
+            #id_dest = self.ids_dest[id_od]
+            
+            print '  check id_zone',id_zone
+            ids_edges_orig_raw = zones.ids_edges_inside[id_zone]
+            
+            #prob_edges_orig_raw = zones.probs_edges_orig[id_orig]
+            
+            # check accessibility of origin edges
+            
+            #prob_edges_orig = []
+            #inds_lane_orig = []
+            
+            for i in xrange(len(ids_edges_orig_raw)):
+                id_edge = ids_edges_orig_raw[i]
+                # if check accessibility...
+                ind_lane_depart_taxi = edges.get_laneindex_allowed(id_edge, id_mode_taxi)
+                ind_lane_depart_ped = edges.get_laneindex_allowed(id_edge, id_mode_ped)
+                
+                
+                #print '    O get_laneindex_allowed id_mode_taxi',id_mode_taxi,id_edge,edges.ids_sumo[id_edge],'ind_lane',ind_lane_depart
+                if (ind_lane_depart_taxi >= 0)&(ind_lane_depart_ped >= 0):
+                    ids_edges_orig.append(id_edge)
+                    #prob_edges_orig.append(prob_edges_orig_raw[i])
+                    #are_fallback_orig.append(False)
+                    #inds_lane_orig.append(ind_lane_depart)
+                   
+
+                                    
+            n_edges_orig = len(ids_edges_orig)
+            
+            print '\n    found',n_edges_orig,'valid zone edges'
+        
+        # update edge probabilities with suitable parameters
+        # edge departure probabilities of all edges in all zones
+        edgeprops =  edges.lengths[ids_edges_orig]*((edges.priorities[ids_edges_orig]<self.priority_max) & (edges.speeds_max[ids_edges_orig] < self.speed_max))
+
+    
+        # now create taxi trips    
+        if (n_edges_orig > 0) & (tripnumber > 0):
+            # normalize weights
+            edgeprops = edgeprops/np.sum(edgeprops)
+            
+            # debug
+            if 0:
+                for id_edge, prob in zip(ids_edges_orig,edgeprops):
+                    print '      orig id_edge',id_edge,'has prob',prob
+                
+                        
+
+            for d in xrange(int(tripnumber+0.5)):
+                #print '      ------------'
+                #print '      generte trip',d
+                time_depart = np.random.uniform(time_start, time_end)
+                
+                i_orig = np.argmax(np.random.rand(n_edges_orig)*edgeprops)
+                id_edge_orig = ids_edges_orig[i_orig]
+                
+                ## destination edge is origin edge
+                # this is no problem as taxis will never leave the sim
+                id_edge_dest = id_edge_orig
+                route = [id_edge_orig] 
+                
+                ## Destination is next edge
+                #
+                #is_accessible = False
+                #for id_edge_dest in fstar[id_edge_orig]:
+                #     # if check accessibility...
+                #    ind_lane_depart_taxi = edges.get_laneindex_allowed(id_edge_dest, id_mode_taxi)
+                #    ind_lane_depart_ped = edges.get_laneindex_allowed(id_edge_dest, id_mode_ped)
+                #    if (ind_lane_depart_taxi >= 0)&(ind_lane_depart_ped >= 0):
+                #        is_accessible = True
+                #        break
+                #if not is_accessible:
+                #    id_edge_dest = id_edge_orig
+                #    route = [id_edge_orig]
+                #else:
+                #    route = [id_edge_orig,id_edge_dest]
+                
+                
+                  
+                id_vtype = ids_vtype_mode_taxi[np.argmax(
+                        np.random.rand(n_vtypes_taxi)*prob_vtype_mode_taxi)]
+                
+                # trip is from beginning to end of edge
+                # however, taxi will not be eliminated at the 
+                # end of edge but continue to next client
+                id_trip = trips.make_trip(id_vtype=id_vtype,
+                                              time_depart = time_depart,
+                                              id_edge_depart = id_edge_orig,
+                                              id_edge_arrival = id_edge_dest,
+                                              ind_lane_depart = -5,#"first": 
+                                              ind_lane_arrival = -1,#"current",
+                                              position_depart = -4, #"base",
+                                              position_arrival = -2, #"max",
+                                              speed_depart = 0.0,
+                                              speed_arrival = 0.0,
+                                              route = route,
+                                              )
+                    
+                n_trips_generated += 1
+                
+            print '  n_trips_generated', n_trips_generated, 'of',self.n_taxi
+            return True
+            
+        else:
+            print '  no taxi created n_edges_orig',n_edges_orig,'tripnumber',tripnumber
+            return False
+        
+        
+    def do(self):
+        
+        return self.generate_taxi()
+        
 
 
 if __name__ == '__main__':

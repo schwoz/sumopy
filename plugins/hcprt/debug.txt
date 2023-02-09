@@ -1,0 +1,23 @@
+prt.199   - 519-520-200 but is not leader
+
+
+enter_veh id_veh prt.35, id_merge_from 1
+
+>enter_veh id_veh prt.35, id_merge_from 1
+
+>>entered vehicle prt.194
+
+
+>>>entered vehicle prt.258
+
+
+
+if  'gneJ1' in net.nodes.ids_sumo[ids_node_out]:#'gneJ29':#'gneJ1':
+                debug = 1
+            else:
+                debug = 0
+
+print '    >>entered vehicle %s, id_leader %d.'%(id_veh_sumo,vehicles.ids_leader[id_veh])
+
+ #if debug>0:
+                    print 'ids_veh_entered_sumo[inds_entered]'

@@ -6,12 +6,25 @@ import time
 # default file path priming
 # this did depend on operating system, now " for all
 P = '"'
-#import platform
+import platform
 #if platform.system()=='Windows':
-#    P = '"'
-#else:
-#    P=''
+if platform.system()=='Linux':
+    IS_LINUX = True
+else:
+    IS_LINUX = False
 
+def string_to_float(s):
+    """Returns a float from a string while cleaning it"""
+    q = ''
+    is_sample = False
+    for c in s:
+        if c.isdigit():
+            q += c
+        elif c == '.':
+            q += c
+        else:
+            break
+    return float (q)
 
 def get_inversemap(m):
     return {v: k for k, v in m.items()}
@@ -61,6 +74,18 @@ def random_choice(n, b):
 #
 #    return np.argmax(np.random.rand(n)*b.flat)
 
+def format_seconds(time, is_round_to_min = True):
+    """
+    Formats seconds in hh:mm:ss
+    """
+    h, rem = divmod(time,3600)
+    m, rem = divmod(rem,60)
+    if is_round_to_min:
+        if rem> 30.0: m += 1
+        return '%02d:%02d'%(h,m)
+    else:
+        return '%02d:%02d:%02d'%(h,m,rem)
+    
 def get_seconds_from_timestr(   t_data, t_offset = None,
                     sep_date_clock = ' ', sep_date = '-', sep_clock = ':',
                     is_float = True):

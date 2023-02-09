@@ -8,7 +8,7 @@ import agilepy.lib_base.xmlman as xm
 #from agilepy.lib_base.misc import get_inversemap
 #from agilepy.lib_base.geometry import find_area
 from agilepy.lib_base.processes import Process,CmlMixin,ff,call,P,filepathlist_to_filepathstring, Options
-from coremodules.network.network import SumoIdsConf
+#from coremodules.network.network import SumoIdsConf
 
 class priorityDictionary(dict):
     def __init__(self):
@@ -184,6 +184,36 @@ def edgedijkstra_backwards(   id_edge_start, cost_limit,
     #print '  P',P
     #print '  D',D               
     return (ids_origin, D, P) # returns in tree with all reachable destinations
+
+def get_edges_orig_from_tree(id_edge_dest, tree):
+    """Returns a list of edge origins with destination edge id_edge_dest
+    from a tree in dictionary form"""
+    #print 'get_edges_orig_from_tree id_edge_dest',id_edge_dest
+    ids_orig = []
+    ids_edge = [id_edge_dest]
+    is_cont = True
+    ids_edge_from = np.array(tree.keys(), dtype = np.int32)
+    ids_edge_to = np.array(tree.values(), dtype = np.int32)
+    if id_edge_dest not in ids_edge_to:
+        return ids_orig
+    while len(ids_edge)>0:
+        #print '    ids_edge',ids_edge
+        ids_edge_new = []
+        for id_edge in ids_edge:
+            inds = np.flatnonzero(ids_edge_to == id_edge)
+            #print '      id_edge',id_edge,'inds',inds
+            if len(inds)==0:
+                ids_orig.append(id_edge)
+                #print '      ids_orig',ids_orig
+            else:
+                ids_edge_new += ids_edge_from[inds].tolist()
+                
+        ids_edge = ids_edge_new
+        
+        
+    return set(ids_orig)
+    
+
 
 
 def edgedijkstra(   id_edge_start, ids_edge_target=None, 
@@ -453,7 +483,7 @@ class RouterMixin(CmlMixin,Process):
                         perm='rw', 
                         )
                         
-        self.add_option('is_repair_to',kwargs.get('is_repair_from',False),
+        self.add_option('is_repair_to',kwargs.get('is_repair_to',False),
                         name = 'Repair end', 
                         info = 'Tries to correct an invalid destination edge by using the last usable edge instead.',
                         cml = '--repair.to',
@@ -470,11 +500,11 @@ class RouterMixin(CmlMixin,Process):
                         )
         
                            
-        # --weights.interpolate <BOOL> 	Interpolate edge weights at interval boundaries; default: false           
-        # --weight-period <TIME> 	Aggregation period for the given weight files; triggers rebuilding of Contraction Hierarchy; default: 3600
-        # --weights.expand <BOOL> 	Expand weights behind the simulation's end; default: false
+        # --weights.interpolate <BOOL>     Interpolate edge weights at interval boundaries; default: false           
+        # --weight-period <TIME>     Aggregation period for the given weight files; triggers rebuilding of Contraction Hierarchy; default: 3600
+        # --weights.expand <BOOL>     Expand weights behind the simulation's end; default: false
         
-        # --with-taz <BOOL> 	Use origin and destination zones (districts) for in- and output; default: false
+        # --with-taz <BOOL>     Use origin and destination zones (districts) for in- and output; default: false
         
         
     def init_options_methods(self,**kwargs):
@@ -950,8 +980,65 @@ class MaRouter(CmlMixin,Process):
                                                 info = "Writes all messages to Log filepath, implies verbous. If blank, no logfile is created",
                                                 ))
                                                                 
-                                                   
-  
+        
+        
+        self.is_update_routes_fastest = attrsman.add(am.AttrConf('is_update_routes_fastest',  kwargs.get('is_update_routes_fastest',False), 
+                                        groupnames = ['options'], 
+                                        name = 'Update routes with fastest', 
+                                        info = """Update all routes with the fastest route found by the macroscopic router.  
+                                         """,
+                                        ))
+                                        
+        self.is_use_odflows = attrsman.add(am.AttrConf('is_use_odflows',  kwargs.get('is_use_odflows',False), 
+                                        groupnames = ['options'], 
+                                        name = 'Use OD flows', 
+                                        info = """Use OD flows between traffic assignment zones (TAZ) instead of the current routes.  
+                                         """,
+                                        ))
+                                                                                   
+        modechoices = scenario.net.modes.names.get_indexmap()
+        #print '  modechoices',modechoices
+        self.id_mode_primary = attrsman.add(am.AttrConf('id_mode_primary',  modechoices['passenger'], 
+                                        groupnames = ['options'], 
+                                        choices = modechoices,
+                                        name = 'Primary Mode', 
+                                        info = """Only valid in case OD flows are used. Transport mode to be used to verify edge accessibility, 
+                                        which influences the distribution of flows on the edges inside each zone. 
+                                         """,
+                                        ))
+                                        
+        
+        
+        #priority_max.get_value()) & (edges.speeds_max[ids_edge] < self.speed_max.get_value()))
+        self.priority_max = attrsman.add(cm.AttrConf( 'priority_max', 8,
+                                                groupnames = ['options','zone'],
+                                                name = 'Max. edge priority',
+                                                perm = 'rw',
+                                                info = "Only valid in case OD flows are used. Maximum edge priority for which edges in a zone are considered departure or arrival edges.",
+                                                ))
+        
+        self.speed_max = attrsman.add(cm.AttrConf( 'speed_max', 14.0,
+                                                groupnames = ['options','zone'],
+                                                name = 'Max. edge speed',
+                                                perm = 'rw',
+                                                unit = 'm/s',
+                                                info = "Only valid in case OD flows are used. Maximum edge speed for which edges in a zone are considered departure or arrival edges.",
+                                                ))
+        
+        self.n_edges_min_length = attrsman.add(cm.AttrConf( 'n_edges_min_length', 1,
+                                                groupnames = ['options','zone'],
+                                                name = 'Min. edge number length prob.',
+                                                perm = 'rw',
+                                                info = "Only valid in case OD flows are used. Edge arrival/departure probability is proportional to the edge length if the number of zone edges is above this minimum number zone edges. Otherwise probability is proportional to the number of zone edges.",
+                                                ))
+        
+        self.n_edges_max_length = attrsman.add(cm.AttrConf( 'n_edges_max_length', 500,
+                                                groupnames = ['options','zone'],
+                                                name = 'Max. edge number length prob.',
+                                                perm = 'rw',
+                                                info = "Only valid in case OD flows are used. Edge arrival/departure probability is proportional to the edge length if the number of zone edges is below this maximum number zone edges. Otherwise probability is proportional to the number of zone edges.",
+                                                ))
+                                                
         if ptstopsfilepath is None:
             self.ptstopsfilepath = scenario.net.ptstops.get_stopfilepath()
 
@@ -964,37 +1051,79 @@ class MaRouter(CmlMixin,Process):
         else:
             self.ptstopsfilepath = ptstopsfilepath
 
-        self.is_export_flow = attrsman.add(cm.AttrConf( 'is_export_flow',kwargs.get('is_export_flow',True),
-                        groupnames = ['input','options'],
-                        perm='rw',
-                        name = 'Export OD flows?',
-                        info = 'Export OD flows before simulation? Needs to be done only once after OD flows changed.',
-                        ) )
-                        
-        if flowfilepath is None:
-            self.flowfilepath = scenario.demand.odintervals.get_flowfilepath()
-
-            
-        else:
-            self.is_export_flow = False
-            self.flowfilepath = flowfilepath
-        
-        
+        #self.is_export_flow = attrsman.add(cm.AttrConf( 'is_export_flow',kwargs.get('is_export_flow',True),
+        #                groupnames = ['input','options'],
+        #                perm='rw',
+        #                name = 'Export OD flows?',
+        #                info = 'Export OD flows before simulation? Needs to be done only once after OD flows changed.',
+        #                ) )
+        if self.is_use_odflows:
+                if flowfilepath is None:
+                    # is given explicitely
+                    self.flowfilepath = scenario.demand.odintervals.get_flowfilepath()
+                    self.is_export_flow = True
+                else:
+                    self.is_export_flow = False
+                    self.flowfilepath = flowfilepath
+                
+                
         if netfilepath is None:
-            self.netfilepath = scenario.net.get_filepath()
+                self.netfilepath = scenario.net.get_filepath()
 
-            self.is_export_net = attrsman.add(cm.AttrConf( 'is_export_net',is_export_net,
+                self.is_export_net = attrsman.add(cm.AttrConf( 'is_export_net',is_export_net,
                             groupnames = ['input','options'],
                             perm='rw',
                             name = 'Export net?',
                             info = 'Export current network before simulation? Needs to be done only once after network has changed.',
                             ) )
         else:
-            self.is_export_net = False
-            self.netfilepath =  netfilepath                  
+                self.is_export_net = False
+                self.netfilepath =  netfilepath                  
 
         self.routeoutputfilepath = None
         self.flowoutputfilepath = None
+    
+    
+    def _get_edgeweights(self, ids_edge, edges):
+        
+        #print 'get_edgeweights ids_edge',ids_edge
+        n_edges = len(ids_edge)
+        if (n_edges > self.n_edges_min_length)&(n_edges < self.n_edges_max_length):
+            return edges.lengths[ids_edge]*((edges.priorities[ids_edge]<self.priority_max) & (edges.speeds_max[ids_edge] < self.speed_max))
+        else:
+            return np.ones(n_edges,dtype = np.float32)*((edges.priorities[ids_edge]<self.priority_max) & (edges.speeds_max[ids_edge] < self.speed_max))
+    
+    
+    def get_zone_edgeinfo(  self, id_zone, weights,fstar, zones, edges):
+        """
+        Returns two arrays, edge IDs and the respective edge weights for zone id_zone 
+        """
+        ids_edge = zones.get_zoneedges_by_mode_fast(id_zone, self.id_mode_primary, 
+                                                        weights = weights, 
+                                                        fstar = fstar,
+                                                        )
+        n_edges = len(ids_edge)
+        if n_edges > 0:
+                #weights = self._get_edgeweights(ids_edge, n_edges_min_length, n_edges_max_length, priority_max, speed_max)
+                #self._mode_to_edgeinfo[id_mode][id_zone] = (ids_edge, weights / np.sum(weights))
+                # store un-normlized weights
+                edgeinfo = (ids_edge, self._get_edgeweights(ids_edge, edges))
+        else:
+                edgeinfo = ([],[])
+        
+        return edgeinfo
+        
+    def get_zoneinfo(self):
+        """Returns a dictionary where id_zone is key and (ids_edge, edgewights) is value."""
+        zones = self.parent.landuse.zones
+        edges = self.parent.net.edges
+        weights = edges.get_times(self.id_mode_primary)
+        fstar = edges.get_fstar(self.id_mode_primary)
+                                                        
+        zoneinfo = {}
+        for id_zone in zones.get_ids():
+                zoneinfo[id_zone] = self.get_zone_edgeinfo(id_zone, weights,fstar, zones, edges) 
+        return zoneinfo
         
     def do(self):
         cml = self.get_cml()
@@ -1006,40 +1135,56 @@ class MaRouter(CmlMixin,Process):
             scenario.net.export_netxml(self.netfilepath)
         else:
             ptstopsfilepath =  self.ptstopsfilepath
-
-
-        if self.is_export_flow &(self.flowfilepath.count(',')==0):
-            scenario.demand.odintervals.export_amitranxml(self.flowfilepath)
         
-        # routefiles are only used to specify vtypes
-        routefilepath = scenario.demand.trips.get_routefilepath()
-        scenario.demand.vtypes.export_xml(routefilepath)
-            
-        zonefilepath = scenario.landuse.zones.export_sumoxml()
-
         rootname = scenario.get_rootfilename()
         rootdirpath = scenario.get_workdirpath()
         
         self.routeoutputfilepath = os.path.join(rootdirpath,rootname+'.out.mrflow.xml')
         self.flowoutputfilepath = os.path.join(rootdirpath,rootname+'.out.mrload.xml')
-        
-        cml +=  ' --net-file %s'%(ff(self.netfilepath))+\
-                ' --route-files %s'%(ff(routefilepath))+\
-                ' --od-amitran-files %s'%(filepathlist_to_filepathstring(self.flowfilepath))+\
-                ' --output-file %s'%(ff(self.routeoutputfilepath))+\
-                ' --netload-output %s'%(ff(self.flowoutputfilepath))
+        routefilepath = scenario.demand.trips.get_routefilepath()
+        if self.is_use_odflows:
+                # demand given by OD flows
+                
+                if self.is_export_flow &(self.flowfilepath.count(',')==0):
+                    scenario.demand.odintervals.export_amitranxml(self.flowfilepath)
+                
+                # here routefiles are only used to specify vtypes
+                scenario.demand.vtypes.export_xml(routefilepath)
+                
+                zonefilepath = scenario.landuse.zones.export_sumoxml(zoneinfo = self.get_zoneinfo())
 
-        additionalpaths = [zonefilepath,]
-        if os.path.isfile(self.ptstopsfilepath):
-            additionalpaths.append(self.ptstopsfilepath)
         
-        cml += ' --additional-files %s'%(filepathlist_to_filepathstring(additionalpaths))                             
+                cml +=  ' --net-file %s'%(ff(self.netfilepath))+\
+                        ' --route-files %s'%(ff(routefilepath))+\
+                        ' --od-amitran-files %s'%(filepathlist_to_filepathstring(self.flowfilepath))+\
+                        ' --output-file %s'%(ff(self.routeoutputfilepath))+\
+                        ' --netload-output %s'%(ff(self.flowoutputfilepath))
         
+                additionalpaths = [zonefilepath,]
+                if os.path.isfile(self.ptstopsfilepath):
+                    additionalpaths.append(self.ptstopsfilepath)
+                
+                cml += ' --additional-files %s'%(filepathlist_to_filepathstring(additionalpaths))                             
+        else:
+                # demand given by route file
+                scenario.demand.export_routes_xml(filepath=routefilepath, encoding = 'UTF-8',
+                                is_route = False, # allow True if route export is implemened in virtual population self.is_skip_first_routing,# produce routes only if first dua routing is skipped
+                                vtypeattrs_excluded = ['times_boarding','times_loading'],# bug of duaiterate!!
+                                is_plain = True, # this will prevent exporting stops and plans 
+                                is_exclude_pedestrians = True, # no pedestriann trips, but plans are OK
+                                )
+                                
+                cml +=  ' --net-file %s'%(ff(self.netfilepath))+\
+                        ' --route-files %s'%(ff(routefilepath))+\
+                        ' --output-file %s'%(ff(self.routeoutputfilepath))+\
+                        ' --netload-output %s'%(ff(self.flowoutputfilepath))
+                
+                        
         if self.logfilepath != '':
             cml +=  ' --log %s'%(ff(self.logfilepath))
         
-        #print '\n Starting command:',cml
-        if call(cml):
+        print '\n Starting command:',cml
+        if self.run_cml(cml):
             if os.path.isfile(self.flowoutputfilepath): 
                 #self.parent.import_routes_xml(routefilepath)
                 #os.remove(routefilepath)
@@ -1058,23 +1203,29 @@ class MaRouter(CmlMixin,Process):
         """
         print 'import_results of marouter'
 
-
+        myscenario = self.parent
 
         if results  is None:
             results = self._results
             if results  is None:
-                results = self.parent.simulation.results
-
+                results = myscenario.simulation.results
+                
+        
+        
         if results is not None:
             #self.routeoutputfilepath = None
             
             if self.flowoutputfilepath is not None:
-                #print '  self.flowoutputfilepath',self.flowoutputfilepath
-                #print '  results.edgeresults',results.edgeresults,id(results.edgeresults)
-                results.edgeresults.import_marouterxml(self.flowoutputfilepath, self)
+                    if os.path.isfile(self.flowoutputfilepath): 
+                        #print '  self.flowoutputfilepath',self.flowoutputfilepath
+                        #print '  results.edgeresults',results.edgeresults,id(results.edgeresults)
+                        results.edgeresults.import_marouterxml(self.flowoutputfilepath, self)
             
-       
-       
+            if self.routeoutputfilepath is not None:
+                    if self.is_update_routes_fastest:
+                        if os.path.isfile(self.routeoutputfilepath): 
+                            myscenario.demand.import_routealternatives_xml(self.routeoutputfilepath, is_fastest = True, is_add = False)
+               
 
     
     

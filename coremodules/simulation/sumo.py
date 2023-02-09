@@ -1,4 +1,5 @@
 import os, sys, string, time
+import shutil # for deleting directory trees
 from collections import OrderedDict
 from xml.sax import saxutils, parse, handler
 if  __name__ == '__main__':
@@ -46,6 +47,7 @@ def write_netconfig(filename_netconfig, filename_net,
                     starttime = None, stoptime = None,
                     time_step = 1.0,
                     time_to_teleport = -1,
+                    scale_demand = -1,
                     pedestrian_model = 'None',
                     width_sublanes = -1.0,
                     filename_ptstops = None,
@@ -59,6 +61,7 @@ def write_netconfig(filename_netconfig, filename_net,
                     filepath_output_edgenoise = None,
                     filepath_output_lanenoise = None,
                     filepath_output_electricenergy = None,
+                    filepath_output_fcd  = None,
                     filepath_output_summary = None,
                     freq = 60,
                     is_exclude_emptyedges = False,
@@ -66,6 +69,7 @@ def write_netconfig(filename_netconfig, filename_net,
                     is_ignore_route_errors = True,
                     filepath_gui= None,
                     seed = 1025,
+                    n_thread = 1,
                     is_openscenegraph = False,
                     width_pedestrian_striping = 0.49,
                     slowdownfactor_pedestrian_striping = 0.2,
@@ -83,6 +87,11 @@ def write_netconfig(filename_netconfig, filename_net,
                     adaptationinterval_rerouting = 1,
                     adaptationweight_rerouting = 0.0,
                     adaptationsteps_rerouting = 180,
+                    n_thread_rerouting = 1,
+                    is_synchonized_rerouting = False,
+                    is_bikespeeds_rerouting = False,
+                    taxiservice = None,
+                    tolerancy_boarding = 10.0
                  ):
     """
     filename_netconfig = output filename of network config file without path
@@ -152,11 +161,16 @@ def write_netconfig(filename_netconfig, filename_net,
         """%(starttime, stoptime))
 
     simfile.write('<time-to-teleport value="%s"/>\n'%time_to_teleport)
+    if scale_demand >= 0:
+        simfile.write('<scale value="%s"/>\n'%scale_demand)
     simfile.write('<seed value="%s"/>\n'%seed)
+    simfile.write('<threads value="%s"/>\n'%n_thread)
     simfile.write('<step-length value="%s"/>\n'%time_step)
 
     simfile.write('<ignore-route-errors value="%s"/>\n'%is_ignore_route_errors)
-
+    
+    simfile.write('<ride.stop-tolerance value="%.2f"/>\n'%tolerancy_boarding)
+    
     if is_ballistic_integrator:
         simfile.write('<step-method.ballistic value="True"/>\n')
 
@@ -179,7 +193,8 @@ def write_netconfig(filename_netconfig, filename_net,
     #simfile.write('<ignore-accidents value="%s"/>\n'%is_ignore_accidents)
 
 
-
+    if taxiservice is not None:
+        taxiservice.write_config(simfile,ident = 0)
 
 
     simfile.write('<output>\n')
@@ -190,6 +205,12 @@ def write_netconfig(filename_netconfig, filename_net,
     if filepath_output_tripinfo  is not None:
         simfile.write('<tripinfo-output value="%s"/>\n'%filepath_output_tripinfo)
     
+    if filepath_output_fcd is not None:
+        simfile.write("""<fcd-output value="%s"/>
+                          <device.fcd.probability  value="1"/>\n
+                      """%(filepath_output_fcd,))
+        # <device.fcd.period value="1"/>
+        
     if filepath_output_electricenergy is not None:
         simfile.write("""<battery-output value="%s"/>
         <battery-output.precision value="4"/>
@@ -218,12 +239,19 @@ def write_netconfig(filename_netconfig, filename_net,
         <device.rerouting.deterministic value="%s"/>
         <device.rerouting.period value="%d"/>
         <device.rerouting.pre-period value="%d"/>
-        <device.rerouting.adaptation-interval value = "%d"/>\n
+        <device.rerouting.adaptation-interval value = "%d"/>
+        <device.rerouting.threads value = "%d"/>
+        <device.rerouting.synchronize value = "%s"/>
+        <device.rerouting.bike-speeds value = "%s"/>
+        \n
             """%(   probability_rerouting,
                     is_deterministic_rerouting,
                     period_rerouting,
                     preperiod_rerouting,
                     float(adaptationinterval_rerouting)/time_step,
+                    n_thread_rerouting,
+                    is_synchonized_rerouting,
+                    is_bikespeeds_rerouting,
                     ))
         
         if adaptationweight_rerouting>0:
@@ -278,6 +306,7 @@ class Sumo(CmlMixin, Process):
                     guimode = 'sumopy',# sumo,
                     is_runnow = False,
                     is_run_background = False, is_nohup = False,
+                    is_write_cml = False,
                     workdirpath = None,
                     is_export_net = True,
                     is_export_poly = True,
@@ -292,7 +321,7 @@ class Sumo(CmlMixin, Process):
                     **kwargs):
 
         #self.scenario = scenario
-        self._cmlfilepath = cmlfilepath
+        
         self._init_common(  'sumo', parent = scenario, name = 'SUMO',
                             logger = logger,
                             info ='SUMO micro simulation of scenario.',
@@ -309,8 +338,7 @@ class Sumo(CmlMixin, Process):
         rootname = scenario.get_rootfilename()
         rootdirpath = scenario.get_workdirpath()
         self.configfilepath = os.path.join(rootdirpath,rootname+'.netc.xml')
-
-        
+       
 
         self.init_cml('xxx', is_run_background = is_run_background, is_nohup = is_nohup)# pass main shell command
         attrsman = self.get_attrsman()
@@ -367,6 +395,16 @@ class Sumo(CmlMixin, Process):
                                                 unit = 's',
                                                 cml = '--time-to-teleport',
                                                  ))
+        
+        self.scale_demand = attrsman.add(cm.AttrConf( 'scale_demand', kwargs.get('scale_demand',-1.0),
+                                                groupnames = ['options','timing'],
+                                                name = 'Demand scale',
+                                                perm = 'rw',
+                                                info = 'Scale demand by the given factor (by discarding or duplicating vehicles). Negative value disables scaling.',
+                                                cml = '--scale',
+                                                is_enabled = lambda self: self.scale_demand >= 0,
+                                                 ))
+        
                                                  
         self._init_attributes_basic(scenario, **kwargs)
         
@@ -390,7 +428,7 @@ class Sumo(CmlMixin, Process):
                                                 groupnames = ['options','timing'],
                                                 name = 'Warmup time',
                                                 perm = 'rw',
-                                                info = 'Start recording results after this time.',
+                                                info = 'Start recording results after this time. It currently work with edgeresults, connectionresults and virtualpersonresults',
                                                 metatype = 'time',
                                                 unit = 's',
                                                  ))
@@ -444,7 +482,32 @@ class Sumo(CmlMixin, Process):
                                                 groupnames = ['options','output'],
                                                 name = 'Output electric energy',
                                                 perm = 'rw',
-                                                info = 'If set, generate energy data for vehicles with electric drive.'
+                                                info = 'If set, record energy data for vehicles with electric drive.'
+                                                ))
+                                                
+        self.is_fcd = attrsman.add(cm.AttrConf( 'is_fcd', kwargs.get('is_fcd',False),
+                                                groupnames = ['options','output'],
+                                                name = 'Output vehicle trajectories',
+                                                perm = 'rw',
+                                                info = 'If set, record vehicle trajectories and speed for each timestep. This means SUMO FCD output is generated. Attention, this option will eat up a tremendous amount of disk space.'
+                                                ))
+        
+        self.is_result_evolution = attrsman.add(cm.AttrConf( 'is_result_evolution', kwargs.get('is_result_evolution',False),
+                                                groupnames = ['options','output'],
+                                                name = 'Produce result evolution',
+                                                perm = 'rw',
+                                                info = """If set, the time evolution of results will be produced, 
+                                                that some result types, link edge results are not only averaged over 
+                                                the simulation time, but for each time interval. 
+                                                This evolution time interval can be specified.""",
+                                                ))
+        
+        self.time_interval_evolution = attrsman.add(cm.AttrConf( 'time_interval_evolution', kwargs.get('time_interval_evolution',900),
+                                                groupnames = ['options','output'],
+                                                name = 'Time of evolution interval',
+                                                perm = 'rw',
+                                                info = """This evolution time interval is the interval over which results are sampled 
+                                                when choosing the results evolution option.""",
                                                 ))
         
         self.is_summary = attrsman.add(cm.AttrConf( 'is_summary', kwargs.get('is_summary',False),
@@ -453,6 +516,7 @@ class Sumo(CmlMixin, Process):
                                                 perm = 'rw',
                                                 info = 'If set, generate summary data of simulation steps.'
                                                  ))
+                                                 
                                                                                           
         outfile_prefix = kwargs.get('outfile_prefix','out')
         self.routesdatapath = attrsman.add(cm.AttrConf('routesdatapath',os.path.join(rootdirpath,rootname+'.'+outfile_prefix+'.roudata.xml'),
@@ -534,7 +598,23 @@ class Sumo(CmlMixin, Process):
                                                 reader = 'interval',
                                                 ))
                                                 
-        self.summarypath = attrsman.add(cm.AttrConf('summarypath',os.path.join(rootdirpath,rootname+'.'+outfile_prefix+'.electricenergysum.xml'),
+        self.filepath_output_fcd = attrsman.add(cm.AttrConf('filepath_output_fcd',os.path.join(rootdirpath,rootname+'.'+outfile_prefix+'.fcd.xml'),
+                                                groupnames = ['outputfiles','_private'],
+                                                perm='r',
+                                                name = 'Trajectory file',
+                                                wildcards = 'Trajectory  XML files (*.fcd.xml)|*.fcd.xml',
+                                                metatype = 'filepath',
+                                                info = """SUMO xml file with edge emission data.""",
+                                                attrnames_data = ['x','y','angle',],
+                                                attrnames_averaged = ['speed',],
+                                                element = 'vehicle',
+                                                id_type = 'vehicle',
+                                                reader = 'interval',
+                                                ))
+                                                
+    
+                                                
+        self.summarypath = attrsman.add(cm.AttrConf('summarypath',os.path.join(rootdirpath,rootname+'.'+outfile_prefix+'.summary.xml'),
                                                 groupnames = ['_private'],
                                                 perm='r',
                                                 name = 'Simulation summary file',
@@ -550,6 +630,7 @@ class Sumo(CmlMixin, Process):
                                                 info = 'Enable rerouting of vehicles during the simulation.'
                                                  ))
                                                  
+        
         self.probability_rerouting = attrsman.add(cm.AttrConf( 'probability_rerouting', kwargs.get('probability_rerouting',0.25),
                                                 groupnames = ['options','rerouting'],
                                                 name = 'Rerouting probability',
@@ -600,6 +681,27 @@ class Sumo(CmlMixin, Process):
                                                 info = 'The number of adaptation steps for edge weights averaging (enable for values > 0).'
                                                  ))
                                                  
+        self.n_thread_rerouting = attrsman.add(cm.AttrConf( 'n_thread_rerouting', kwargs.get('n_thread_rerouting',1),
+                                                groupnames = ['options','rerouting'],
+                                                name = 'Parallel threads for rerouting',
+                                                perm = 'rw',
+                                                info = 'The number of parallel execution threads used for rerouting.'
+                                                 ))
+                                                 
+        self.is_synchonized_rerouting = attrsman.add(cm.AttrConf( 'is_synchonized_rerouting', kwargs.get('is_synchonized_rerouting',False),
+                                                groupnames = ['options','rerouting'],
+                                                name = 'Synchronized rerouting',
+                                                perm = 'rw',
+                                                info = 'Let rerouting happen at the same timefor all vehicles.'
+                                                 ))
+        
+        self.is_bikespeeds_rerouting = attrsman.add(cm.AttrConf( 'is_bikespeeds_rerouting', kwargs.get('is_bikespeeds_rerouting',False),
+                                                groupnames = ['options','rerouting'],
+                                                name = 'Separate bikespeeds for rerouting',
+                                                perm = 'rw',
+                                                info = 'Compute separate average speeds for bicycles and takes this into account during rerouting.'
+                                                 ))
+                                                 
         self._init_special(**kwargs)
 
 
@@ -641,7 +743,14 @@ class Sumo(CmlMixin, Process):
                                                 info = "Writes all messages to Log filepath, implies verbous. If blank, no logfile is created",
                                                 ))
 
-
+        self.is_write_cml = attrsman.add(cm.AttrConf( 'is_write_cml',is_write_cml,
+                        groupnames = ['options','misc'],#
+                        perm='rw',
+                        name = 'Write command line to file',
+                        info = 'Write command line to file instead of executing SUMO. This can be used to run the SUMO simulation outside SUMOPy.',
+                        ) )
+        
+        
         if ptstopsfilepath is None:
             ptstopsfilepath = scenario.net.ptstops.get_stopfilepath()
 
@@ -748,6 +857,8 @@ class Sumo(CmlMixin, Process):
 
         #print '  is_export_poly,is_include_poly, filepath_poly',is_export_poly, self.is_include_poly, self.polyfilepath
 
+        if cmlfilepath == None:
+            self._cmlfilepath = os.path.join(rootdirpath,rootname+'.bash')
         
 
         if is_runnow:
@@ -796,6 +907,8 @@ class Sumo(CmlMixin, Process):
                                                 info = 'Whether to use ballistic method for the  positional update of vehicles (default is a semi-implicit Euler method).',
                                                 cml = optionprefix+'--step-method.ballistic',
                                                 ))
+        
+        
                                                  
         #print '  ',scenario.demand.vtypes.lanechangemodel.get_value()
         if scenario.demand.vtypes.lanechangemodel.get_value() in ['SL2015',]:
@@ -864,7 +977,14 @@ class Sumo(CmlMixin, Process):
         #                                                        info = 'Excludes empty edges from being sampled.',
         #                                                        cml = optionprefix+'--end',
         #                                                        ))
-
+        self.n_thread = attrsman.add(cm.AttrConf(    'n_thread',kwargs.get('n_thread',1),
+                            name = optionprefix_nice+'Number of threads',
+                            perm = 'rw',
+                            groupnames = ['options','processing']+prefixgroups,
+                            info = 'Defines the number of threads for parallel simulation.',
+                            cml = optionprefix+'--threads',
+                            ))
+                            
         self.seed = attrsman.add(cm.AttrConf(    'seed',kwargs.get('seed',0),
                             name = optionprefix_nice+'Seed',
                             perm = 'rw',
@@ -954,6 +1074,13 @@ class Sumo(CmlMixin, Process):
         else:
             electricenergypath = None
         
+        if self.is_fcd:
+            filepath_output_fcd = self.filepath_output_fcd
+        else:
+            filepath_output_fcd = None
+            
+        
+        
         if self.is_summary:
             summarypath = self.summarypath
         else:
@@ -1012,6 +1139,7 @@ class Sumo(CmlMixin, Process):
             filename_poly = filename_poly,
             dirname_output = self.dirpath_results,
             time_to_teleport = self.time_to_teleport,
+            scale_demand = self.scale_demand,
             filepath_output_vehroute = routesdatapath,
             filepath_output_tripinfo = tripdatapath,
             is_tripdata_unfinished = self.is_tripdata_unfinished,
@@ -1019,6 +1147,7 @@ class Sumo(CmlMixin, Process):
             #filepath_output_lanedata = self._get_filepath_output('lanedata'),
             filepath_output_edgeemissions = edgeemissionspath,
             filepath_output_electricenergy = electricenergypath,
+            filepath_output_fcd = filepath_output_fcd,
             filepath_output_summary = summarypath,
             #filepath_output_laneemissions = self._get_filepath_output('laneemissions'),
             filepath_output_edgenoise = edgenoisepath,
@@ -1027,6 +1156,7 @@ class Sumo(CmlMixin, Process):
             #is_exclude_emptyedges = self.is_exclude_emptyedges,
             #is_exclude_emptylanes =self.is_exclude_emptylanes,
             seed = self.seed,
+            n_thread = self.n_thread,
             filepath_gui= filepath_gui,
             is_openscenegraph = self.guimode is 'openscene',
             width_pedestrian_striping = scenario.demand.vtypes.width_pedestrian_striping.get_value(),
@@ -1045,37 +1175,26 @@ class Sumo(CmlMixin, Process):
             adaptationinterval_rerouting = self.adaptationinterval_rerouting,
             adaptationweight_rerouting = self.adaptationweight_rerouting,
             adaptationsteps_rerouting = self.adaptationsteps_rerouting,
+            n_thread_rerouting = self.n_thread_rerouting,
+            is_synchonized_rerouting = self.is_synchonized_rerouting,
+            is_bikespeeds_rerouting = self.is_bikespeeds_rerouting,
+            taxiservice = self.parent.simulation.taxiservice,
+            tolerancy_boarding = scenario.demand.vtypes.tolerancy_boarding.get_value(),
             )
 
-        if self._cmlfilepath is None:
+        if not self.is_write_cml:
             print '  call run_cml'
             return self.run_cml(cml = self.get_cml())
         else:
             print '  do not simulate but write cml to',self._cmlfilepath
             f= open(self._cmlfilepath,"w+")
             f.write(self.get_cml()+'\n')
-            if 0:
-                if self.is_edgedata:
-                    f.write('edgedatapath'+','+self.edgedatapath+'\n')
-                    
-                if self.is_edgenoise:
-                    f.write('edgenoisepath'+','+self.edgenoisepath+'\n')
-                    
-                if self.is_edgesemissions:
-                    f.write('edgeemissionspath'+','+self.edgeemissionspath+'\n')
-                    
-                if self.is_routedata:
-                    f.write('routesdatapath'+','+self.routesdatapath+'\n')
-                    
-                if self.is_tripdata:
-                    f.write('tripdatapath'+','+self.tripdatapath+'\n')
-                    
 
             f.close()
             return True
         #self.import_results()
 
-    def get_scenario():
+    def get_scenario(self):
         return self.parent
     
     
@@ -1122,7 +1241,12 @@ class Sumo(CmlMixin, Process):
             if self.is_electricenergy:
                 if os.path.isfile(self.electricenergypath):
                     resultfilepaths['electricenergypath'] = self.electricenergypath
-                    
+            
+          
+            if self.is_fcd:
+                if os.path.isfile(self.filepath_output_fcd):
+                    resultfilepaths['trajectorypath'] = self.filepath_output_fcd
+                            
             if len(resultfilepaths)>0:
                 results.import_xml(self, **resultfilepaths)
 
@@ -1141,10 +1265,10 @@ class Sumo(CmlMixin, Process):
             p = P
         else:
             p = ''
-        print 'get_cml p=%s='%p
+        print 'get_cml p=%s='%p,'guimode *%s*'%self.guimode,'is nogui',self.guimode == 'nogui'
         #print '  self.configfilepath=%s='%self.configfilepath
         #print '  self.logfilepath=%s='%self.logfilepath
-        if self.guimode is 'nogui':
+        if self.guimode == 'nogui':
             command = 'sumo'
         else:
             command = 'sumo-gui'
@@ -1253,13 +1377,14 @@ class SumoTraci(Sumo):
         """
         Special initializations. To be overridden.
         """
-        
-        self.is_simpla = self.get_attrsman().add(cm.AttrConf( 'is_simpla', kwargs.get('is_simpla',False),
-                                                groupnames = ['options','misc'],
-                                                name = 'Use simple platooning',
-                                                perm = 'rw',
-                                                info = 'Performs simple platooning operations, as configured in Simpla.',
-                                                ))
+        # overridden by antijammer for example
+        pass
+        #self.is_simpla = self.get_attrsman().add(cm.AttrConf( 'is_simpla', kwargs.get('is_simpla',False),
+        #                                        groupnames = ['options','misc'],
+        #                                        name = 'Use simple platooning',
+        #                                        perm = 'rw',
+        #                                        info = 'Performs simple platooning operations, as configured in Simpla.',
+        #                                        ))
 
 
     def do(self):
@@ -1267,14 +1392,11 @@ class SumoTraci(Sumo):
         Called by run after is_ready verification
         """
         
-        if self.is_simpla:
-            # enable simpla
-            # must be enabled before exporting demand because of vtypes
-            simplaconfig = self.parent.simulation.simplaconfig
-            simplaconfig.enable(True)
-            
-            
         Sumo.do(self)
+        
+    def prepare_sim_special(self):
+        # overridden by antijammer 
+        pass
         
     def run_cml(self, cml):
         scenario = self.parent
@@ -1282,8 +1404,8 @@ class SumoTraci(Sumo):
         print 'SumoTraci.run_cml',cmllist
         traci.start(cmllist)
         
-        if self.is_simpla:
-            simplaconfig = self.parent.simulation.simplaconfig
+        simplaconfig = self.parent.simulation.simplaconfig
+        if simplaconfig.is_enabled:
             simplaconfig.prepare_sim()
         
         self.simtime = self.simtime_start
@@ -1296,14 +1418,17 @@ class SumoTraci(Sumo):
 
         for simobj in self.parent.simulation.get_simobjects():
             # attention, simpla is not a simulation object, only a demand object
-            #print '  prepare_sim',simobj.ident
+            print '  prepare_sim',simobj.ident
             simobjects += simobj.prepare_sim(self)
 
         #simobjects = self._prtservice.prepare_sim(self)
         self.simobjects = []
         for time_sample, simfunc in simobjects:
             self.simobjects.append([self.simtime_start,time_sample, simfunc])
-        print '  simobjects=',self.simobjects
+        #print '  simobjects=',self.simobjects
+        
+        
+        self.prepare_sim_special()
         return True
 
 
@@ -1325,7 +1450,9 @@ class SumoTraci(Sumo):
         # called interactively
         # when gui it is called through the timer function
         print 79*'='
-        print "simstep", self.simtime,self.simtime_end,self.simtime >= self.simtime_end
+        print "simstep", self.simtime,self.simtime_end#,self.simtime >= self.simtime_end
+        # TODO: make a time to finish estimation
+        
         traci.simulationStep()
         for i in xrange(len(self.simobjects)):
             #for time_last, time_sample, simfunc in self.simobjects:
@@ -1354,15 +1481,21 @@ class SumoTraci(Sumo):
         print '    traci closed.'
         self.get_attrsman().status.set('success')
         
-        if self.is_simpla:
-            scenario.simulation.simplaconfig.finish_sim()
-            scenario.simulation.simplaconfig.enable(False)
+        for simobj in self.parent.simulation.get_simobjects():
+            print '  call finish_sim of',simobj.ident
+            simobj.finish_sim()
+            
         
+        simplaconfig = self.parent.simulation.simplaconfig
+        if simplaconfig.is_enabled:
+            scenario = self.get_scenario()
+            simplaconfig.finish_sim()
+           
+        for simobj in self.parent.simulation.get_simobjects():
+            print '  call process_results of',simobj.ident
+            simobj.process_results(self._results, process = self)
+            
         return True
-
-    #def process_step(self):
-    #    #print traci.vehicle.getSubscriptionResults(vehID)
-    #    print 'process_step time=',self.simtime
 
 
     
@@ -1433,12 +1566,20 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
                                                 ) 
                                                 
         
-                                                 
+        #argParser.add_argument("-J", "--addweights", dest="addweights",
+        #                   help="Additional weightes for duarouter")
+        #argParser.add_argument(
+        #"--pessimism", default=1, type=float, help="give traffic jams a higher weight when using option --weight-memory")
+    
+                                                                    
         self.add_option(   'n_convergence_iterations', kwargs.get('n_convergence_iterations',10),
                             groupnames = ['options','processing'],# 
                             cml = '--convergence-iterations',
                             name = "convergence iterations",
-                            info = "Number of iterations to use for convergence calculation.",
+                            info = """Force convergence by iteratively reducing the fraction of vehicles that may alter their route.
+                            - If a positive value x is used, the fraction of vehicles that keep their old route is set to max(0, min(step / x, 1) which prevents changes in assignment after step x.
+                            - If a negative value x is used, the fraction of vehicles that keep their old route is set to 1 - 1.0 / (step - |x|) for steps after |x| which asymptotically reduces assignment after |x| steps.
+                            """
                             )                    
                                                                             
         self.add_option(   'routesteps', kwargs.get('routesteps',200),
@@ -1583,20 +1724,74 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
                         info = 'Smooth edge weights across iterations.',
                         )
                         
-
-        self.add_option('is_expand_weights', kwargs.get('is_expand_weights',False),
+        self.add_option('weight_jams', kwargs.get('weight_jams',1),
                         groupnames = ['options','processing'],# 
-                        cml = '--weights.expand',
-                        name = 'Expand edge weights', 
-                        info = 'Expand edge weights at time interval boundaries.',
+                        cml = '--pessimism',
+                        name = 'Weight memory', 
+                        info = 'Give traffic jams a higher weight when using option weight-memory.',
+                        is_enabled = lambda self: self.is_weight_memory,
                         )
-                                           
+        # seems not to work !                
+        #self.add_option('is_expand_weights', kwargs.get('is_expand_weights',False),
+        #                groupnames = ['options','processing'],# 
+        #                cml = '--weights.expand',
+        #                name = 'Expand edge weights', 
+        #                info = 'Expand edge weights at time interval boundaries.',
+        #                )
+        
+        # TODO: check how to include options from routing.RouterMixin.init_options_methods(**kwargs)
+        # problem: duaiterate uses slightly different command line options
+        
+        # Warning from duarouter: The --logit option is deprecated, please use --route-choice-method logit.
+        self.add_option('is_logit', kwargs.get('is_logit',True),
+                            groupnames = ['options','processing'],# 
+                            cml = '--logit',
+                            name = "Use C-Logit",
+                            perm = 'rw',
+                            info = "Use C-Logit model as route choice model, otherwise the Gavron model is used.",
+                            ) 
+                            
+        self.add_option('n_max_alternatives', kwargs.get('n_max_alternatives',5),
+                        groupnames = ['options','processing'],# 
+                        cml = '--max-alternatives',
+                        name = 'Maximum route alternatives', 
+                        info = 'Prune the number of route choice alternatives to this integer.',
+                        )
+        
+        self.add_option('beta_logit', kwargs.get('beta_logit',0.15),
+                        groupnames = ['options','processing'],# 
+                        cml = '--logitbeta',
+                        name = "C-Logits's beta", 
+                        info = "C-logit's beta for the commonality factor. Only valid if Logit route choice method is selected",
+                        is_enabled = lambda self: self.is_logit,
+                        )
+        
+        self.add_option('gamma_logit', kwargs.get('gamma_logit',1.0),
+                        groupnames = ['options','processing'],# 
+                        cml = '--logitgamma',
+                        name = "C-Logits's gamma", 
+                        info = "C-logit's gamma for the commonality factor. Only valid if Logit route choice method is selected",
+                        is_enabled = lambda self: self.is_logit,
+                        )
+        
+        self.add_option('theta_logit', kwargs.get('theta_logit',0.01),
+                        groupnames = ['options','processing'],# 
+                        cml = '--logittheta',
+                        name = "C-Logits's theta", 
+                        info = "C-logit's theta. Only valid if Logit route choice method is selected",
+                        is_enabled = lambda self: self.is_logit,
+                        )
+                            
+                                            
+        
+                            
         self.add_option(    'g_alpha', kwargs.get('g_alpha',0.5),
                             groupnames = ['options','processing'],# 
                             cml = '--gA',
                             name = "g_alpha",
                             perm = 'rw',
                             info = "Sets Gawron's Alpha",
+                            is_enabled = lambda self: not self.is_logit,
                             )
                                                 
         self.add_option(    'g_beta', kwargs.get('g_beta',0.9),
@@ -1605,6 +1800,7 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
                             name = "g_beta",
                             perm = 'rw',
                             info = "Sets Gawron's Beta",
+                            is_enabled = lambda self: not self.is_logit,
                             )
                             
         self.add_option('routingalgorithm', kwargs.get('routingalgorithm','dijkstra'),
@@ -1630,31 +1826,60 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
                             perm = 'rw',
                             info = "No tripinfos are written by the simulation after each step, which saves time and disk space.",
                             )  
-                            
+        
+        
+        
         self.add_option(    'inc_base', kwargs.get('inc_base',-1),
                             groupnames = ['options','processing'],# 
                             cml = '--inc-base',
                             name = "inc base",
                             perm = 'rw',
-                            info = "Give the incrementation base. Negative values disable  incremental scaling.",
+                            info = "Number of increments needed to reach maximum demand scaling. Negative values disable  incremental demand scaling.",
                             is_enabled = lambda self: self.inc_base >= 0, # default is disabeled
-                            )   
+                            )  
+                            
+        self.add_option(    'inc_start', kwargs.get('inc_start',0.5),
+                            groupnames = ['options','processing'],# 
+                            cml = '--inc-start',
+                            name = "inc start",
+                            perm = 'rw',
+                            info = "The incrementation start is the share of demand during the first iteration.",
+                            is_enabled = lambda self: self.inc_base >= 0, # default is disabeled
+                            )
+        
+        self.add_option(    'inc_max', kwargs.get('inc_max',1.0),
+                            groupnames = ['options','processing'],# 
+                            cml = '--inc-max',
+                            name = "inc maxc",
+                            perm = 'rw',
+                            info = "Maximum demand scaling, when incremental scaling is used.",
+                            is_enabled = lambda self: self.inc_base >= 0, # default is disabeled
+                            )
+                                                                                        
+        
+        
         
         self.add_option(    'inc_value', kwargs.get('inc_value',1),
-                            groupnames = ['options','processing'],# 
+                            groupnames = ['options','processing','_private'],# 
                             cml = '--incrementation',
                             name = "inc value",
                             perm = 'rw',
-                            info = "Give the incrementation",
+                            info = "Give the demand incrementation step size factor. Should always be set to 1.",
+                            is_enabled = lambda self: self.inc_base >= 0, # default is disabeled
                             )     
                                            
-        self.add_option(   'time_inc', kwargs.get('time_inc',0),
+        self.add_option(   'time_inc', kwargs.get('time_inc',-1),
                             groupnames = ['options','processing'],# 
                             cml = '--time-inc',
                             name = "inc time",
                             perm = 'rw',
-                            info = "Give the time incrementation.",
+                            info = """The total simulation time can be increase incrementally.
+                            This is the time increment for each iteration. The end of simulation time time_end is calculated in the following way:
+                            time_end = time_inc * (step + 1),
+                            where time_inc is the given time increment in seconds and step is the iteration step, starting with 0.
+                            """,
                             unit = 's',
+                            is_enabled = lambda self: self.time_inc >= 0, # default is disabeled
                             )  
                             
         self.add_option(   'format_routefile', kwargs.get('format_routefile','None'),
@@ -1798,19 +2023,30 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
 
         
     def get_last_step(self):
+        # very fragile method
         #filenames = os.listdir(self.workdir)
         #filenames.sort()
         #step = int(filenames[-1].split('_')[1])
+        if 1:
+            step_max = 0
+            for filename  in os.listdir(self.workdirpath):
+                try:
+                    step = int(filename)
+                except:
+                    step = -1
+                if step > step_max:
+                   step_max = step 
+            
+        if 0: #older sumo version
+            step_max = 0
+            for filename  in os.listdir(self.workdirpath):
+                if filename.startswith('dump'):
+                    #print '  ',filename,
+                    step = int(filename.split('_')[1])
+                    if step>step_max:
+                        step_max = step
         
-        step_max = 0
-        for filename  in os.listdir(self.workdirpath):
-            if filename.startswith('dump'):
-                #print '  ',filename,
-                step = int(filename.split('_')[1])
-                if step>step_max:
-                    step_max = step
-                    
-        return step_max
+        return min(step_max,self.step_last)
                 
         
     def do(self):
@@ -1841,6 +2077,7 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
                                 is_route = False, # allow True if route export is implemened in virtual population self.is_skip_first_routing,# produce routes only if first dua routing is skipped
                                 vtypeattrs_excluded = ['times_boarding','times_loading'],# bug of duaiterate!!
                                 is_plain = True, # this will prevent exporting stops and plans 
+                                is_exclude_pedestrians = True, # no pedestriann trips, but plans are OK
                                 )
                                 
         
@@ -1865,7 +2102,7 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
         sumooptions = Options()
         for attrconfig in self.get_attrsman().get_configs(is_all = True):
             if ('sumo' in attrconfig.groupnames) & hasattr(attrconfig,'cml'):
-                print '  sumooption',attrconfig.attrname,attrconfig.groupnames,'is path',attrconfig.get_metatype() in self.pathmetatypes,'has cmlmap',hasattr(attrconfig,'cmlvaluemap')
+                #print '  sumooption',attrconfig.attrname,attrconfig.groupnames,'is path',attrconfig.get_metatype() in self.pathmetatypes,'has cmlmap',hasattr(attrconfig,'cmlvaluemap')
                 is_enabled = True
                 if hasattr(attrconfig, 'is_enabled'):
                     #print ' is_enabled=',attrconfig.is_enabled(self), attrconfig.get_value()
@@ -1885,27 +2122,57 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
 
                                                         
         #print '\n Starting command:',cml
-        if call(cml):
-            routefilepath_final = '.'.join(self.routefilepath.split('.')[:-2]) + "_%03d.rou.xml"%(self.get_last_step(),)
+        if self.run_cml(cml):#call(cml):
+            step_last = self.get_last_step()
+            if 0: # old SUMO version
+                routefilepath_final = '.'.join(self.routefilepath.split('.')[:-2]) + "_%03d.rou.xml"%(self.get_last_step(),)
+            else:
+                #print '  new since 1.8.0 ?'
+                #print '    workdirpath',self.workdirpath,'step_last',step_last
+                resultdir = os.path.join(self.workdirpath, str(step_last))
+                print '    resultdir', resultdir
+                filename = self.parent.get_rootfilename()+ "_%03d.rou.xml"%(self.get_last_step(),)
+                print '    filename',filename
+                #routefilepath_final = os.path.join(self.workdirpath, str(step_last),'.'.join(self.routefilepath.split('.')[:-2]) + "_%03d.rou.xml"%(step_last,))
+                routefilepath_final = os.path.join(resultdir, filename)
+                    
+            
+            
             print '  load routes from file ',routefilepath_final
             if os.path.isfile(routefilepath_final): 
                 scenario.demand.import_routes_xml(routefilepath_final)
 
                 
             if self.is_clean_files:
-                for filename  in os.listdir(self.workdirpath):
-                    if filename.startswith('dump'):
-                        os.remove(os.path.join(self.workdirpath,filename))
-                    
-                    elif filename.startswith('dua_dump_'):
-                        os.remove(os.path.join(self.workdirpath,filename))
+                if 0: # old version
+                    for filename  in os.listdir(self.workdirpath):
+                        if filename.startswith('dump'):
+                            os.remove(os.path.join(self.workdirpath,filename))
                         
-                    elif filename.startswith('iteration_'):
-                        os.remove(os.path.join(self.workdirpath,filename))
-                    
-                    elif filename.startswith('summary_'):
-                        os.remove(os.path.join(self.workdirpath,filename))
-                          
+                        elif filename.startswith('dua_dump_'):
+                            os.remove(os.path.join(self.workdirpath,filename))
+                            
+                        elif filename.startswith('iteration_'):
+                            os.remove(os.path.join(self.workdirpath,filename))
+                        
+                        elif filename.startswith('summary_'):
+                            os.remove(os.path.join(self.workdirpath,filename))
+                            
+                else: #new since 1.8.0 ?'
+                    for step in xrange(self.step_first, step_last):
+                        filepath = os.path.join(self.workdirpath, str(step))
+                        print '  delete dir',filepath
+                        if os.path.isdir(filepath):
+                            #print '    delete now'
+                            try:
+                                shutil.rmtree(filepath)
+                            except OSError as e:
+                                print ("Error: %s - %s." % (e.filename, e.strerror))
+                                
+
+                   
+                         
+                              
                             
             return True
         
@@ -1928,4 +2195,5 @@ class Duaiterate( CmlMixin,Sumo): # attention, CmlMixin overrides Sumo
         
         
         
+     
      

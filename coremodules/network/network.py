@@ -26,6 +26,7 @@ from agilepy.lib_base.geometry import *
 
 import netconvert
 import publictransportnet as pt
+from routing import get_mincostroute_edge2edges
 
 
 MODES = OrderedDict([\
@@ -584,6 +585,7 @@ class Connections(am.ArrayObjman):
         ident = 'connections'
         self._init_objman(ident=ident, parent=parent, name = 'Connections',
                             xmltag = ('connections','connection',None),
+                            version = 0.1,
                             **kwargs)
         self._init_attributes()
 
@@ -591,13 +593,17 @@ class Connections(am.ArrayObjman):
 
 
         lanes = self.parent.lanes
-        self.add_col(am.IdsArrayConf( 'ids_node', lanes,
+        nodes = self.parent.nodes
+        self.add_col(am.IdsArrayConf( 'ids_node', nodes,
                                             groupnames = ['state'],
                                             name = 'ID node',
                                             info = 'ID of the node on which the intersection is included.',
                                             xmltag = 'Node',
                                             ))
-                                            
+        if  self.get_version() < 0.1:
+            # this has been an error: before linktab was lanes!!
+            self.ids_node.set_linktab(nodes)
+                                                
         self.add_col(am.ArrayConf('are_tls', False,
                                     dtype=np.bool,
                                     perm = 'rw',
@@ -678,7 +684,7 @@ class Connections(am.ArrayObjman):
                                     name = 'number connections at node',
                                     info = 'Number of connections within the node in which the connection is included. This indicates the complexity of the intersection in which the connection is included.',
                                             )) 
-                                    
+        self.set_version(0.1)
 ##        self.add_col(am.ArrayConf( 'are_right_turn',  False,
 ##                                    dtype=np.bool,
 ##                                    perm='rw',
@@ -790,7 +796,7 @@ class Connections(am.ArrayObjman):
             node = connections.ids_node[connection]
             connections.numbers_connections_at_node[connection] = nodes.n_connections[node]           
             
-        return 'ok'
+        return True
     
     def get_azimut(self, point1, point2):
             #point1 = [x1,y1], point2 = [x2,y2]. Return the azimut of the second
@@ -1029,14 +1035,18 @@ class Lanes(am.ArrayObjman):
         width = kwargs.get('width',-1)
         speed_max = kwargs.get('speed_max',-1)
         ids_modes_allow = kwargs.get('ids_modes_allow',[])
+        id_mode = kwargs.get('id_mode',-1)
 
 
         is_sidewalk_edge = False
         is_sidewalk = False
-        if len(ids_modes_allow)>0:
-            id_mode = ids_modes_allow[0] # pick first as major mode
+        if id_mode != -1:
+            id_mode = id_mode
         else:
-            id_mode = -1 # no mode specified
+            if len(ids_modes_allow)>0:
+                id_mode = ids_modes_allow[0] # pick first as major mode
+            else:
+                id_mode = -1 # no mode specified
 
         if index == 0:
             width_sidewalk_edge = edges.widths_sidewalk[id_edge]
@@ -1100,7 +1110,7 @@ class Lanes(am.ArrayObjman):
         edges = self.parent.edges
         
         ids_lane = edges.ids_lanes[id_edge]
-        print 'reshape_edgelanes id_edge',id_edge,'id_edge_sumo',edges.ids_sumo[id_edge],len(ids_lane)
+        #print 'reshape_edgelanes id_edge',id_edge,'id_edge_sumo',edges.ids_sumo[id_edge],len(ids_lane)
         
         shape = np.array(edges.shapes[id_edge],np.float32)
 
@@ -1195,6 +1205,11 @@ class Lanes(am.ArrayObjman):
         return indexes
     
     def get_laneindex_allowed(self, ids_lane, id_mode):
+        """
+        Returns laneindex where mode id_mode is allowed.
+        The index points to one of the given lane IDs, which
+        are assumed to be IDs of the same edge.
+        """
         #print 'get_laneindex_allowed',ids_lane, id_mode
         # check ignoring mode and give it the first non pedestrian only lane
         if id_mode == MODES["ignoring"]:
@@ -1245,11 +1260,91 @@ class Lanes(am.ArrayObjman):
         # make sure id_mode is not disallowed
         if id_mode in self.ids_modes_disallow[id_lane]:
             self.ids_modes_disallow[id_lane].remove(id_lane)
-
     
+    def get_accesslevel_lanes(self, ids_lane, id_mode):
+        """
+        Returns a vector corrisponding to the dimension of ids_lane,
+        where each element indicates whether mode id_mode has access:
+            -1 = No access
+            0 = all modes can access
+            1 = mode can access with a restricted number of other modes
+            2 = exclusive access for id_mode
+        """
+        
+        #is_blocked = False
+        #print '  ids_modes_allow',self.ids_modes_allow.get_value()
+        accesses = np.zeros(len(ids_lane), dtype = np.int32)
+        is_mode_only = False
+        is_mode_mixed = False
+        is_modes_all = False
+        
+        for i, id_lane, ids_modes_allow, ids_modes_disallow in zip(xrange(len(ids_lane)), ids_lane,self.ids_modes_allow[ids_lane], self.ids_modes_disallow[ids_lane]):
+            is_mode_only = False
+            is_mode_mixed = False
+            is_modes_all = False
+                
+            if ids_modes_allow is None:
+                ids_modes_allow = []
+            if ids_modes_disallow is None:
+                ids_modes_disallow = []
+            
+            #if id_lane == 33520:
+            #    print '  ids_modes_allow',ids_modes_allow,'ids_modes_disallow',ids_modes_disallow,'id_mode',id_mode,id_mode in ids_modes_allow
+            
+            if len(ids_modes_allow)==0:
+                # no allow information, so look for disallowed
+                
+                if len(ids_modes_disallow)==0:
+                    # no access information: all are allowed
+                    is_modes_all = True
+                    #is_access = True
+                
+                elif id_mode not in ids_modes_disallow:
+                    # mode is not disallowed, so it is allowed with others
+                    # but we opt for mixed mode only if explicitely allowed,
+                    # and not selectively forbidden
+                    #is_mode_mixed = True
+                    is_modes_all = True
+                    #is_access = True
+                    
+            elif len(ids_modes_allow)==1:
+                if id_mode == ids_modes_allow[0]:
+                    # found exclusive access
+                    is_mode_only = True
+                    #is_access = True
+                
+            elif id_mode in ids_modes_allow:
+                # mode is allowed together with others
+                is_mode_mixed = True
+                #is_access = True
+                    
+
+        
+            if is_mode_only:
+                a = 2
+            
+            elif is_mode_mixed:
+                a = 1
+                
+            elif is_modes_all:
+                a = 0
+                
+            else:
+                a = -1
+            
+            accesses[i] = a
+            #if (41824 in ids_lane)|((41826 in ids_lane)):
+            #    print 'get_accesslevel',ids_lane,'accesslevel=',a
+            #    for id_lane, ids_modes_allow, ids_modes_disallow in zip(ids_lane,self.ids_modes_allow[ids_lane], self.ids_modes_disallow[ids_lane]):
+            #        print '  id_lane',id_lane,'ids_modes_allow',ids_modes_allow,'ids_modes_disallow',ids_modes_disallow
+                
+        return accesses    
+        
+        
+        
     def get_accesslevel(self, ids_lane, id_mode):
         """
-        Returns access level of mode on lanes ids_lane:
+        Returns access level of mode on lanes ids_lane, which are supposed to reside on the same edge:
             -1 = No access
             0 = all modes can access
             1 = mode can access with a restricted number of other modes
@@ -1330,6 +1425,43 @@ class Lanes(am.ArrayObjman):
                 
     
 
+    def get_accesslevel_bikecontrary_special(self, id_lane):
+        """
+        Returns access level of mode on lanes ids_lane:
+            -2 = contrary sense for bike
+
+        """
+        #print 'get_accesslevel',ids_lane
+        is_mode_only = False
+        is_mode_mixed = False
+        is_modes_all = False
+        is_mode_not_allowed = False
+        #is_blocked = False
+        #print '  ids_modes_allow',self.ids_modes_allow.get_value()
+        ids_modes_allow  = self.ids_modes_allow[id_lane]       
+        ids_modes_disallow = self.ids_modes_disallow[id_lane]
+        id_mode_main = self.ids_mode[id_lane]
+        a = 0   
+        if id_mode_main == self.parent.modes.get_id_mode("passenger") and self.parent.modes.get_id_mode("bicycle") in ids_modes_allow and self.parent.modes.get_id_mode("pedestrian") in ids_modes_allow and self.parent.modes.get_id_mode("passenger") not in ids_modes_allow:
+            is_mode_not_allowed = True       
+            # no allow info?
+            #if (ids_modes_allow is None) |  (ids_modes_allow == []):
+            #    # no disallow info?
+            #    if (ids_modes_disallow is None) |  (ids_modes_disallow == []):
+            #        #
+
+        
+        if is_mode_not_allowed:
+            a =  -2
+        #if (41824 in ids_lane)|((41826 in ids_lane)):
+        #    print 'get_accesslevel',ids_lane,'accesslevel=',a
+        #    for id_lane, ids_modes_allow, ids_modes_disallow in zip(ids_lane,self.ids_modes_allow[ids_lane], self.ids_modes_disallow[ids_lane]):
+        #        print '  id_lane',id_lane,'ids_modes_allow',ids_modes_allow,'ids_modes_disallow',ids_modes_disallow
+            
+        return a    
+                
+    
+
     def get_coord_from_pos(self, id_lane, pos):
         return get_coord_on_polyline_from_pos(self.shapes[id_lane],pos)
 
@@ -1338,7 +1470,8 @@ class Lanes(am.ArrayObjman):
             id_sumo_edge = self.parent.edges.ids_sumo[self.ids_edge[id_lane]]
             return id_sumo_edge+'_'+str(self.indexes[id_lane])
         else:
-            return ''
+            return 5
+
 
 
 class Roundabouts(am.ArrayObjman):
@@ -1386,8 +1519,6 @@ class Roundabouts(am.ArrayObjman):
                             )
                             
                             
-     
-
 class Edges(am.ArrayObjman):
     # http://www.sumo.dlr.de/userdoc/Networks/Building_Networks_from_own_XML-descriptions.html#Edge_Descriptions
     def __init__(self, parent, **kwargs):
@@ -1482,6 +1613,15 @@ class Edges(am.ArrayObjman):
                                             info = 'Edge length.',
                                             xmltag = 'length ',
                                             ))
+                                            
+            self.add_col(am.ArrayConf('edge_typology', '',
+                                    dtype=np.object,
+                                    perm = 'rw',
+                                    name = 'Type',
+                                    info = 'edge typology.',
+                                    xmltag = 'pass',
+                                    ))
+
             if self.get_version() < 0.3:
                 self.lengths.set_xmltag('length')
                 #self.lengths.set_xmltag(None)
@@ -1507,10 +1647,15 @@ class Edges(am.ArrayObjman):
                                             xmltag = 'shape',
                                             ))
 
+            # update
+            if hasattr(self, 'types_spread'):
+                self.types_spread.choices["roadCenter"] = 2
+                
             self.add_col(am.ArrayConf( 'types_spread', 0,
                                             choices = {\
                                                 "right": 0,
                                                 "center": 1,
+                                                "roadCenter":2,
                                                 },
                                             dtype = np.int32,
                                             perm='rw',
@@ -1518,7 +1663,8 @@ class Edges(am.ArrayObjman):
                                             info = 'Determines how the lanes are spread with respect to main link coordinates.',
                                             xmltag = 'spreadType',
                                             ))
-
+            
+            
             self.add_col(am.ArrayConf( 'names', '',
                                             dtype = np.object,
                                             perm='rw',
@@ -1645,7 +1791,7 @@ class Edges(am.ArrayObjman):
 
     def get_fstar(self, is_return_lists = False, is_return_arrays = False,
                         is_ignor_connections = False, 
-                        #id_mode=None
+                        id_mode = None
                         ):
         """
         Returns the forward star graph of the network as dictionary:
@@ -1661,29 +1807,74 @@ class Edges(am.ArrayObjman):
             are considered, disregarding the actual connections
 
         """
+        #print 'get_fstar id_mode',id_mode,'is_return_lists',is_return_lists,'is_return_arrays',is_return_arrays
         #ids_edge = self.get_ids()
         #fstar = np.array(np.zeros(np.max(ids_edge)+1, np.obj))
         fstar = {}
+        connections = self.parent.connections
+        lanes = self.parent.lanes
+        inds_con = connections.get_inds()
         if is_ignor_connections:
             # here we ignore connections and look at the
             # outgoing edges of node database
-            ids_outgoing = self.parent.nodes.ids_outgoing
-            ids = self.get_ids()
-            for id_edge, id_tonode in zip(ids,self.ids_tonode[ids]):
-                ids_edge_outgoing = ids_outgoing[id_tonode]
-                if ids_edge_outgoing is not None:
-                    fstar[id_edge] = set(ids_edge_outgoing)
-                else:
-                    fstar[id_edge] = set()
+            if 1: #id_mode is None:
+                # not even mode is checked
+                ids_outgoing = self.parent.nodes.ids_outgoing
+                ids = self.get_ids()
+                for id_edge, id_tonode in zip(ids,self.ids_tonode[ids]):
+                    ids_edge_outgoing = ids_outgoing[id_tonode]
+                    if ids_edge_outgoing is not None:
+                        fstar[id_edge] = set(ids_edge_outgoing)
+                    else:
+                        fstar[id_edge] = set()
+                    
+            #else:# actually the get_times or get_distance method should eliminate not accessible edges
+                # check also if id_mode has access at both ends of each connection
+                # ids_lane = lanes.get_ids()
+                # has_access = np.zeros(np.max(ids_lane)+1, dtype = np.bool)
+                # ids_fromedge = list(set(lanes.ids_edge[ids_lane[lanes.get_accesslevel_lanes(ids_lane, id_mode) > -1]]))
+                # for id_edge, id_tonode in zip(ids_fromedge,self.ids_tonode[ids_fromedge]):
+                #    ids_edge_outgoing = ids_outgoing[id_tonode]
+                #    if ids_edge_outgoing is not None:
+                #        fstar[id_edge] = set()
+                #        for id_edge in ids_edge_outgoing
+                #            if 
+                #            fstar[id_edge].add(id_toedge)
+                #    else:
+                #        fstar[id_edge] = set()
+                
         else:
             # here we check actual connections
             # this is important if correct turns are desired
             # for exampole in car routing
-            connections = self.parent.connections
-            lanes = self.parent.lanes
-            inds_con = connections.get_inds()
-            ids_fromedge = lanes.ids_edge[connections.ids_fromlane.get_value()[inds_con]]
-            ids_toedge =  lanes.ids_edge[connections.ids_tolane.get_value()[inds_con]]
+            
+            if id_mode is None:
+                # check connection but do not check accessibility
+                
+                ids_fromedge = lanes.ids_edge[connections.ids_fromlane.get_value()[inds_con]]
+                ids_toedge =  lanes.ids_edge[connections.ids_tolane.get_value()[inds_con]]
+            
+            else:
+                # check also if id_mode has access at both ends of each connection
+                ids_lane = lanes.get_ids()
+                has_access = np.zeros(np.max(ids_lane)+1, dtype = np.bool)
+                # this is quite slow, because get_accesslevel is slow
+                # TODO: substitute by a simpler accesslevel checker
+                has_access[ids_lane] = lanes.get_accesslevel_lanes(ids_lane, id_mode) > -1
+                
+                ids_fromlane_all = connections.ids_fromlane.get_value()[inds_con]
+                ids_tolane_all = connections.ids_tolane.get_value()[inds_con]
+                #if 1:# debug
+                #    id_edge_test = 48891
+                #    edges = self
+                #    
+                #    for id_fromlane, id_tolane, has_access_fromlane, has_access_tolane in zip(ids_fromlane_all, ids_tolane_all, has_access[ids_fromlane_all], has_access[ids_tolane_all]):
+                #        is_valid = has_access_fromlane & has_access_tolane
+                #        print '    id_fromedge',edges.ids_sumo[lanes.ids_edge[id_fromlane]],has_access_fromlane,'id_toedge',edges.ids_sumo[lanes.ids_edge[id_tolane]],has_access_tolane,'valid',is_valid
+                    
+                inds_valid = np.flatnonzero(np.logical_and(has_access[ids_fromlane_all], has_access[ids_tolane_all]))
+                ids_fromedge = lanes.ids_edge[ids_fromlane_all[inds_valid]]
+                ids_toedge =  lanes.ids_edge[ids_tolane_all[inds_valid]]
 
             for id_edge in self.get_ids():
                 fstar[id_edge] = set()
@@ -1698,10 +1889,11 @@ class Edges(am.ArrayObjman):
                     fstar[id_edge] = np.array(ids_toedges, dtype = np.int32)
                 else:
                     fstar[id_edge] = ids_toedges
+        #print '  fstar',fstar
         return fstar
 
     def get_bstar(self, is_return_lists = False, is_return_arrays = False,
-                        is_ignor_connections = False):
+                        is_ignor_connections = False, id_mode = None):
         """
         Returns the backward star graph of the network as dictionary:
             bstar[id_edge] = set([id_fromedge1, id_fromedge2,...])
@@ -1787,8 +1979,87 @@ class Edges(am.ArrayObjman):
             accesslevels[id_edge] = get_accesslevel(ids_lane, id_mode)
         return accesslevels
 
-
-    def get_distances(self, id_mode = 0, is_check_lanes = False, is_precise = True):
+    def get_max_connected(self, ids_edge=None, id_mode = None, is_bidir = True,
+                                speed_max =None, 
+                                modeconst_excl = 0.0, modeconst_mix = 0.0,
+                                weights = None, fstar = None):
+        """
+        Returns a list with the maximum possible  number of connected edges.
+        
+        If list ids_edge with edge IDs is provided then the maximum number of connected 
+        edges are withing the given list.
+        
+        If id_mode is given the only edges with access to this mode are considered.
+        
+        If is_bidir is True then also the back-ward connectivity is berified,
+        this means the returned edges are connected in both directions.
+        """
+        #print 'get_max_connected id_mode',id_mode,'ids_edge',ids_edge
+        
+        if ids_edge is None:
+            ids_edge = self.get_ids()
+       
+        if id_mode is not None:
+            ids_edge = ids_edge[self.get_accesslevels(id_mode)[ids_edge] >= 0]
+        
+        if weights is None:
+            weights= self.get_times(id_mode = id_mode, is_check_lanes = True, 
+                                    speed_max = speed_max,
+                                    modeconst_excl = modeconst_excl, 
+                                    modeconst_mix = modeconst_mix)
+        if fstar is None:
+            fstar = self.get_fstar(is_ignor_connections = False, id_mode = id_mode)
+                                            
+        
+        n_edge = len(ids_edge) # total number of accessible edges
+        
+        #print '  n_edge',n_edge
+        
+        is_continue = True
+        
+        ids_edge_unreached_set = set(ids_edge)
+        n_reached_max = 0
+        n_edge_unreached = len(ids_edge_unreached_set)
+        ids_edges_reachable_max = np.zeros(0, dtype = np.int32)
+        #print '  n_edge_unreached',n_edge_unreached
+        while is_continue & (n_edge_unreached > 0):
+            id_edge_start = ids_edge_unreached_set.pop()
+            ids_edge_unreached =  np.array(list(ids_edge_unreached_set), dtype = np.int32)
+            #print '    check id_edge_start',id_edge_start,'ids_edge_unreached',ids_edge_unreached
+            costs, routes = get_mincostroute_edge2edges(\
+                                            id_edge_start, ids_edge_unreached, 
+                                            weights= weights,
+                                            fstar = fstar,
+                                            )
+            #print '      costs',costs
+            #print '      routes',routes
+            ids_edge_reached = ids_edge_unreached[np.array(costs, dtype = np.int32) >= 0]
+            n_reached = len(ids_edge_reached)
+            
+            ids_edge_unreached_set.symmetric_difference_update(ids_edge_reached)
+            n_edge_unreached = len(ids_edge_unreached_set)
+            # important: add the start edge to the reached edges
+            ids_edge_reached = np.concatenate(([id_edge_start],ids_edge_reached))
+            if n_reached > n_reached_max:
+                n_reached_max = n_reached
+                ids_edges_reachable_max = ids_edge_reached.copy()  
+            
+            # if the number of yet unreached edges is greater than
+            # the found maximum reachable number of edges (n_reached_max with a specific start edge)
+            # then there is still a chance to find a better start edge, 
+            # beating the current maximum of n_reached_max reached edge
+            is_continue = n_edge_unreached > n_reached_max
+        #print '  final result: ids_edges_reachable_max', ids_edges_reachable_max 
+        if is_bidir:
+            # call same fuction with ids_edges_reachable_max as target sets
+            ids_edges_reachable_max = self.get_max_connected(   ids_edge = ids_edges_reachable_max, 
+                                                                id_mode = id_mode, is_bidir = False,
+                                                                weights = weights, fstar = fstar)
+        
+        #print '  final result bidir: ids_edges_reachable_max', ids_edges_reachable_max       
+        return ids_edges_reachable_max
+        
+    def get_distances(self, id_mode = 0, is_check_lanes = False, is_precise = True, modeconst_excl = 0.0,modeconst_mix = 0.0):
         """
         Returns distances for all edges.
         The returned array represents the distance that corresponds to
@@ -1798,9 +2069,9 @@ class Edges(am.ArrayObjman):
         the respective mode is allowed.
 
         If not allowed on a particular edge,
-        then the respective edge distance is negative.
+        then the respective edge distance is nan.
         """
-        print 'get_distances id_mode,is_check_lanes,speed_max',id_mode,is_check_lanes,is_precise
+        #print 'get_distances id_mode,is_check_lanes,speed_max',id_mode,is_check_lanes,is_precise
         ids_edge = self.get_ids()
         dists = np.zeros(np.max(ids_edge)+1, np.float32)
         #speeds = self.speeds_max[ids_edge]
@@ -1822,8 +2093,8 @@ class Edges(am.ArrayObjman):
                             coords[self.ids_fromnode[ids_edge]], 
                             coords[self.ids_tonode[ids_edge]]):
                 #print '    id_edge',id_edge,'len %.1f'%(self.lengths[id_edge]),'d_from %.2f'%(np.sqrt(np.sum( (shape[0]-coord_fromnode)**2 )) ),'d_to %.2f'%(np.sqrt(np.sum((shape[-1]-coord_tonode)**2)) )
-                dists[id_edge] = np.sqrt(np.sum( (shape[0]-coord_fromnode)**2 ))
-                dists[id_edge] += np.sqrt(np.sum((shape[-1]-coord_tonode)**2))
+                dists[id_edge] = np.sum( (shape[0]-coord_fromnode)**2 ) + np.sum((shape[-1]-coord_tonode)**2)
+                #dists[id_edge] += np.sum((shape[-1]-coord_tonode)**2)
         
         
         
@@ -1831,7 +2102,7 @@ class Edges(am.ArrayObjman):
             #    print '    id_edge',id_edge,'len %.1f'%(self.lengths[id_edge]),'d_node %.2f'%(np.sqrt(dist2))
             
         
-            dists [ids_edge] += self.lengths[ids_edge] 
+            dists [ids_edge] = np.sqrt(dists[ids_edge])+self.lengths[ids_edge] 
         
         ids_lanes = self.ids_lanes
         if is_check_lanes & (id_mode>0):# mode 0 can pass everywhere
@@ -1839,18 +2110,27 @@ class Edges(am.ArrayObjman):
             get_accesslevel = self.parent.lanes.get_accesslevel
             has_noaccess = np.nan
             for id_edge in ids_edge:
-                if get_accesslevel(ids_lanes[id_edge], id_mode)==has_noaccess:
+                if get_accesslevel(ids_lanes[id_edge], id_mode) == -1:
                     dists[id_edge] = has_noaccess
 
-                #ind = get_laneindex_allowed(ids_lanes[id_edge], id_mode)
-                #print '  check id_edge, ind',id_edge, ind
-                #if ind<0:
-                #    dists[id_edge] = ind # =-1
+                accesslevel = get_accesslevel(ids_lanes[id_edge], id_mode)
+                if accesslevel== -1:
+                    dists[id_edge] = has_noaccess
+                elif accesslevel== 2:
+                    dists[id_edge] = max(dists[id_edge]+ modeconst_excl,0)
+                elif accesslevel== 1:
+                    dists[id_edge] = max(dists[id_edge]+ modeconst_mix,0)
 
         return dists
 
-
-    def get_times(self, id_mode = 0, is_check_lanes = False, speed_max = None,
+    #def get_times_accumulated(self, id_edge_target, id_mode, timeout = np.inf, edgetimes = None, bstar = None):
+    #    """
+    #    Returns accumulated edge times for each edge in the network that can reach
+    #    target edge id_edge_target with mode id_mode
+    #    """
+        
+        
+    def get_times(self, id_mode = None, is_check_lanes = False, speed_max = None,
                         modeconst_excl = 0.0,modeconst_mix = 0.0, ):
         """
         Returns freeflow travel times for all edges
@@ -2134,6 +2414,15 @@ class Edges(am.ArrayObjman):
         Returns eucledian distance from a point p to a given edge.
         As a second argument it returns the coordinates of the
         line segment (x1,y1,x2,y2) which is closest to the point.
+        
+        If is_ending is True, the end of segment detection is enabled:
+    
+        If is_detect_initial is True then a point whose projection is beyond
+        the start of the segment will result in a NaN distance.
+        
+        If is_detect_final is True then a point whose projection is beyond
+        the end of the segment will result in a NaN distance.
+        
         """
         inds_seg = self.get_inds_seg_from_id_edge(id_edge)
         vertices = self._segvertices
@@ -2177,7 +2466,7 @@ class Edges(am.ArrayObjman):
         Returns edge id which is closest to point p.
         Requires execution of make_segment_edge_map
         """
-        #print 'get_closest_edge',p
+        #print 'get_closest_edge'#,p
         if len(self)==0:
             return np.array([],np.int)
 
@@ -2191,7 +2480,7 @@ class Edges(am.ArrayObjman):
         x2 = vertices[:,1,0]
         y2 = vertices[:,1,1]
 
-
+        #print '  type(x1)',type(x1[0]),'type(p)',type(p[0])
         #print '  x1', x1
         #print '  x2', x2
         #halfwidths = 0.5*self.get_widths_array()[self._polyinds]
@@ -2245,7 +2534,7 @@ class Edges(am.ArrayObjman):
                 id_edge_min = self.get_ids(self._edgeinds[ind])
                 
                 if accesslevels is not None:
-                    print '  check access id_edge_min',id_edge_min,id_edge_min in self,'dists_min',np.sqrt(dists2_min),accesslevels[id_edge_min]
+                    #print '  id_edge_min',id_edge_min,'dists_min',np.sqrt(dists2_min),accesslevels[id_edge_min]
                     if accesslevels[id_edge_min]>-1:
                         ids_min = [id_edge_min]
                     else:
@@ -2264,11 +2553,9 @@ class Edges(am.ArrayObjman):
                 ind = np.argmin(d2)
                 dist2_min = d2[ind]
                 id_edge = self.get_ids(self._edgeinds[ind])
-                #print '  check id_edge',id_edge
+                #print '  check id_edge',id_edge,dist2_min,type(dist2_min)
                 if np.isinf(dist2_min):
                     is_cont = False
-                
-                    
                 elif id_edge not in ids_min:
                     #print '  min(d)=',np.sqrt(np.min(d2)),'argmin=',np.argmin(d2),'id_edge=',self.get_ids(self._edgeinds[np.argmin(d2)])
                     #dist2_min = d2[ind]
@@ -2283,10 +2570,7 @@ class Edges(am.ArrayObjman):
                 
                 if  len(dists2_min) ==  n_best:
                      is_cont = False  
-                
-                if len(d2)<2:
-                    is_cont = False  
-            print '  found ids_edge',ids_min,dists2_min
+            #print '  found ids_edge',ids_min
             return ids_min, np.sqrt(dists2_min)
         
         else:
@@ -2405,6 +2689,12 @@ class Edges(am.ArrayObjman):
                                 + (self.widths_sidewalk[ids] >= 0) * (self.widths_sidewalk[ids]-self.widths_lanes_default[ids])
             #print '  self.shapes[ids]',self.shapes[ids],type(self.shapes[ids])
             self.lengths[ids] = get_length_polypoints(self.shapes[ids])
+        
+        
+        lanes = self.get_lanes()
+        for id_edge in ids:
+            self.speeds_max[id_edge] = np.max(lanes.speeds_max[self.ids_lanes[id_edge]])
+
 
         self.widths.set_modified(True)
         self.lengths.set_modified(True)
@@ -2527,10 +2817,81 @@ class Edges(am.ArrayObjman):
             self.update(is_update_lanes = True)
 
 
+    def analyze_edges( self, **kwargs):
+        # TODO: this should feed into a temporary field
+        print 'Analyze edges'
+        #individuate edge typologies (pedestrian, bike lane, bike/pedestrian, 
+        #one-way road, 2-way road)
+        network = self.parent
+        modes = network.modes
+        edges = network.edges
+        lanes = network.lanes
+        ids_edge = edges.get_ids()
+        pedestrian_edges = []
+        cycling_edges = []
+        ids_lanes = edges.ids_lanes[ids_edge]
+        #check edges with only a pedestrian lane
+        cycling_ped_edges = []
+        id_bike = modes.get_id_mode("bicycle")
+        id_ped = modes.get_id_mode("pedestrian")
+        for id_edge, id_lanes in zip(ids_edge, ids_lanes):
+            if len(lanes.ids_mode[id_lanes]) == 1: 
+                if lanes.ids_mode[id_lanes] == [id_ped]:
+                    pedestrian_edges.append(id_edge) 
+                    print 'edge', id_edge, 'ped'
+                if lanes.ids_mode[id_lanes] == [id_bike]:
+                    cycling_edges.append(id_edge) 
+                    print 'edge', id_edge, 'cycl'
+        edges.edge_typology[pedestrian_edges] = 'Pedestrian'
+        edges.edge_typology[cycling_edges] = 'bike lane'
+        
+        for no_car_edge in pedestrian_edges:
+            ids_edge = ids_edge[(ids_edge != no_car_edge)]
+        for no_car_edge in cycling_edges:
+            ids_edge = ids_edge[(ids_edge != no_car_edge)]
+            
+        ids_lanes = edges.ids_lanes[ids_edge]
+        
+        for id_edge, id_lanes in zip(ids_edge, ids_lanes):
+            if len(lanes.ids_modes_allow[id_lanes][0]) == 2 and len(id_lanes) == 1: 
+                if id_bike in np.array(lanes.ids_modes_allow[id_lanes][0]) and id_ped in np.array(lanes.ids_modes_allow[id_lanes][0]):
+                    cycling_ped_edges.append(id_edge) 
+                    print 'edge', id_edge, 'cycl_ped'
+            elif len(id_lanes) == 2: 
+                if lanes.ids_mode[id_lanes[0]] == id_bike and lanes.ids_mode[id_lanes[1]] == id_ped:
+                    cycling_ped_edges.append(id_edge) 
+                    print 'edge', id_edge, 'cycl_ped'
+                if lanes.ids_mode[id_lanes[0]] == id_ped and lanes.ids_mode[id_lanes[1]] == id_bike:
+                    cycling_ped_edges.append(id_edge) 
+                    print 'edge', id_edge, 'cycl_ped'
+                
+        edges.edge_typology[cycling_ped_edges] = 'Bike/Pedestrian'
+        ids_edge_car = ids_edge
+        for no_car_edge in cycling_ped_edges:
+            ids_edge_car = ids_edge_car[(ids_edge_car != no_car_edge)]
 
-
-
-
+        ids_fromnode_car = edges.ids_fromnode[ids_edge_car]
+        ids_tonode_car = edges.ids_tonode[ids_edge_car]        
+        for id_edge, id_tonode, id_fromnode in zip(ids_edge_car, ids_tonode_car, ids_fromnode_car):
+            edges.edge_typology[id_edge] = '2-way road'
+            ids_fromnode_car2 = ids_fromnode_car[(ids_tonode_car == id_fromnode)]
+            if id_tonode not in ids_fromnode_car2:
+                edges.edge_typology[id_edge] = '1-way road'
+        
+##        ids_fromnode_bike = edges.ids_fromnode[cycling_edges]
+##        ids_tonode_bike = edges.ids_tonode[cycling_edges]        
+##        for id_edge, id_tonode, id_fromnode in zip(cycling_edges, ids_tonode_bike, ids_fromnode_bike):
+##            edges.edge_typology[id_edge] = '2-way bike lane'
+##            ids_fromnode_bike2 = ids_fromnode_bike[(ids_tonode_bike == id_fromnode)]
+##            if id_tonode not in ids_fromnode_bike2:
+##                edges.edge_typology[id_edge] = '1-way bike lane'
+            
+##            for id_edge2, id_tonode2, id_fromnode2 in zip(ids_edge, ids_tonode2, ids_fromnode2):
+##                if id_tonode2 == id_fromnode:
+##                    if id_fromnode2 == id_tonode:
+##                        edges.are_one_way[id_edge] = False
+        
+        return True
 
 
 
@@ -3639,7 +4000,7 @@ class Network(cm.BaseObjman):
                 oldoffset = self.get_offset()
             else:
                 oldoffset = None
-            print 'Network.import_xml oldoffset',oldoffset
+            #print 'Network.import_xml oldoffset',oldoffset
             # remove current network
             # print '  remove current network'
             self.clear_net()
@@ -4620,20 +4981,10 @@ class SumoEdgeReader(handler.ContentHandler):
                         modes_access = MODES.keys()
                         
                 ids_modes_allow = list(self._modenames.get_ids_from_indices(modes_access))
+                ids_modes_disallow  = []
+                
 
-            # done in end element
-            #elif self._allow_egdeattr is not None:
-            #    ids_modes_allow = list(self._modenames.get_ids_from_indices(self._allow_egdeattr.split(' ')))
-
-            else:
-                edgetype = self.types_edge[self._ind_edge]
-
-                if OSMEDGETYPE_TO_MODES.has_key(edgetype):
-                    ids_modes_allow, speed_max_default = OSMEDGETYPE_TO_MODES[edgetype]
-                else:
-                    ids_modes_allow = []
-
-            if attrs.has_key('disallow'):
+            elif attrs.has_key('disallow'):
                 modes_access = attrs['disallow'].split(' ')
                 if len(modes_access) == 1:
                     if modes_access[0] == u'all':
@@ -4641,14 +4992,19 @@ class SumoEdgeReader(handler.ContentHandler):
                     
                 #print '    startElement id_edge_sumo',self.ids_edge_sumo[ind_edge],'disallow',modes_access
                 ids_modes_disallow  = list(self._modenames.get_ids_from_indices(modes_access))
+                ids_modes_allow = []
+            
+            else: # neither allow nor disallow is specified
+                # guess allow from edge type
+                edgetype = self.types_edge[self._ind_edge]
 
+                if OSMEDGETYPE_TO_MODES.has_key(edgetype):
+                    ids_modes_allow, speed_max_default = OSMEDGETYPE_TO_MODES[edgetype]
+                else:
+                    ids_modes_allow = []
+                
+                ids_modes_disallow  = []   
 
-            # done in end element
-            #elif self._disallow_egdeattr is not None:
-            #    ids_modes_allow = list(self._modenames.get_ids_from_indices(self._disallow_egdeattr.split(' ')))
-            #
-            else:
-                 ids_modes_disallow  = []
 
 
 

@@ -5,34 +5,27 @@ from agilepy.lib_wx.modulegui import ModuleGui
 from agilepy.lib_wx.processdialog import ProcessDialog,ProcessDialogInteractive
 from coremodules.scenario.scenario import Scenario
 from coremodules.network import routing
-import sumo, results
+from coremodules.misc.matplottools import ResultDialog
+import sumo, results, antijammer
 
 from result_oglviewer import Resultviewer
 
-try:
+if 1:#try:
     import results_mpl as results_mpl
     is_mpl = True # we have matplotlib support
-except:
+else:
+    #except:
     print "WARNING: python matplotlib package not installed, no matplotlib plots."
     is_mpl = False 
 
-class ResultDialog(ProcessDialog):
-    def _get_buttons(self):
-        buttons=[   ('Plot and close',   self.on_run,      'Plot  selected quantity in matplotlib window and close this window thereafter.'),
-                    ('Plot',   self.on_show,      'Plot selected quantity in matplotlib window.'),
-                    ]
-        defaultbutton='Plot and close'
-        standartbuttons=['cancel',]
-        
-        return buttons, defaultbutton, standartbuttons
-    
-    def on_show(self, event):
-        self.process.show()
+
  
 class EnergyResultDialog(ProcessDialog):
     def _get_buttons(self):
         buttons=[   ('Plot and close',   self.on_run,      'Plot  energy results in matplotlib window and close this window thereafter.'),
                     ('Plot',   self.on_show,      'Plot energy results in matplotlib window.'),
+                    ('Save Options...', self.on_save_options, self.on_save_options.__doc__),
+                    ('Load Options...', self.on_load_options, self.on_load_options.__doc__),
                     ]
         defaultbutton='Plot and close'
         standartbuttons=['cancel',]
@@ -72,12 +65,12 @@ class WxGui(ModuleGui):
         Set mainframe and initialize widgets to various places.
         """
         self._mainframe = mainframe
-        print 'SimulationGui.init_widgets'
+        #print 'SimulationGui.init_widgets'
         #mainframe.browse_obj(self._net)
         self.make_menu()
         self.make_toolbar()
         self._resultviewer = mainframe.add_view("Result viewer", Resultviewer)
-        print '  self._resultviewer',self._resultviewer,self._resultviewer.get_drawing()
+        #print '  self._resultviewer',self._resultviewer,self._resultviewer.get_drawing()
         
     def refresh_widgets(self):
         """
@@ -86,12 +79,12 @@ class WxGui(ModuleGui):
         dependent on the availability of data. 
         """
         scenario = self.get_scenario()
-        print 'simulation.WxGui.refresh_widgets',self._simulation != scenario.simulation
+        #print 'simulation.WxGui.refresh_widgets',self._simulation != scenario.simulation
         is_refresh = False 
         
         
         if self._simulation != scenario.simulation:
-            print '  id(self._simulation)',id(self._simulation),'id(scenario.simulation)',id(scenario.simulation),scenario.rootname
+            #print '  id(self._simulation)',id(self._simulation),'id(scenario.simulation)',id(scenario.simulation),scenario.rootname
             del self._simulation
             self._simulation = scenario.simulation
             is_refresh = True
@@ -102,11 +95,12 @@ class WxGui(ModuleGui):
         #if is_refresh
         if self._simulation.results.is_modified():
             #
-            print '  refresh of _resultviewer'    
+            #print '  refresh of _resultviewer'    
             drawing = self._resultviewer.set_results(self._simulation.results)
         #    canvas = self._neteditor.get_canvas()
         else:
-            print '  no refresh of _resultviewer :('   
+            #print '  no refresh of _resultviewer :('  
+            pass 
 
     def make_menu(self):
         #print 'make_menu'
@@ -142,6 +136,12 @@ class WxGui(ModuleGui):
                 info='Define simulation parameters and simulate with SUMO with interactive control via TRACI.',
                 bitmap = self.get_icon('icon_sumo.png'),#,
                 ) 
+            menubar.append_item( 'simulation/microscopic simulation/SUMO traci with antijammer...',
+                self.on_antijammer, 
+                bitmap = self.get_icon('icon_sumo.png'),#,
+                ) 
+         
+        
         
         menubar.append_item( 'simulation/microscopic simulation/Dynamic User Equilibrium...',
                 self.on_duaiterate, 
@@ -203,7 +203,9 @@ class WxGui(ModuleGui):
         menubar.append_item( 'simulation/results/add detector flow measurements to edgeresults',
             self.on_add_detectorflows_to_edgeresults, 
             )    
-        
+        menubar.append_item( 'simulation/results/add detector flow measurements to edgeresults evolution',
+            self.on_add_detectorflows_to_edgeresultsevolution, 
+            )
         
             
         #menubar.append_item( 'simulation/results/safe',
@@ -231,14 +233,48 @@ class WxGui(ModuleGui):
             info='Save trip related results in a CSV file.',
             bitmap = self.get_agileicon("Document_Export_24px.png"),
             )        
-                            
+        
+        
+        menubar.append_item( 'simulation/results/import edge result evolution from XML...',
+            self.on_import_edgeresultsevolution, 
+            )
+        menubar.append_item( 'simulation/results/import load evolution from marouter XML...',
+            self.on_import_edgeresultsevolution_marouter, 
+            )
+        
+        menubar.append_item( 'simulation/results/filter edgresults...',
+            self.on_filter_edgeresults, 
+            )  
+                                
         if is_mpl:
             menubar.append_item( 'simulation/results/plot edge results on map',
                 self.on_plot_results, 
                 bitmap = self.get_icon('icon_mpl.png'),#,
                 )
+            menubar.append_item( 'simulation/results/plot edge results evolution on map...',
+                self.on_plot_evolutionresults, 
+                bitmap = self.get_icon('icon_mpl.png'),#,
+                )
+            menubar.append_item( 'simulation/results/plot 2 edge results on XY plot...',
+                self.on_plot_xy_edgeresults, 
+                bitmap = self.get_icon('icon_mpl.png'),#,
+                )
+                
+            menubar.append_item( 'simulation/results/plot 2 edge results evolution on XY plot...',
+                self.on_plot_xy_evolutionresults, 
+                bitmap = self.get_icon('icon_mpl.png'),#,
+                )
+            menubar.append_item( 'simulation/results/plot speedprofiles...',
+                self.on_plot_speedprofiles, 
+                bitmap = self.get_icon('icon_mpl.png'),#,
+                )    
             
-            menubar.append_item( 'simulation/results/plot electrical energy',
+            menubar.append_item( 'simulation/results/plot travel times...',
+                self.on_plot_traveltimes, 
+                bitmap = self.get_icon('icon_mpl.png'),#,
+                ) 
+                        
+            menubar.append_item( 'simulation/results/plot electrical energy...',
                 self.on_plot_electrical_energy_results, 
                 bitmap = self.get_icon('icon_mpl.png'),#,
                 )     
@@ -454,7 +490,99 @@ class WxGui(ModuleGui):
         # Destroy the dialog. Don't do this until you are done with it!
         # BAD things can happen otherwise!
         dlg.Destroy()
-                        
+    
+    def on_filter_edgeresults(self, event = None):
+        """Filter edgeresults by zone, etc."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        edgeresultfilter = results.EdgeresultFilter(  self._simulation.results.edgeresults, 
+                                                    logger = self._mainframe.get_logger())
+        dlg = ProcessDialog(self._mainframe, edgeresultfilter)
+                         
+        dlg.CenterOnScreen()
+    
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            #print ">>>>>>>>>Unsuccessful\n"
+            dlg.Destroy()
+            
+        if dlg.get_status() == 'success':
+            #print ">>>>>>>>>successful\n"
+            # apply current widget values to scenario instance
+            dlg.apply()
+            dlg.Destroy()
+            self._mainframe.browse_obj(self._simulation.results.edgeresults)
+    
+    def on_import_edgeresultsevolution_marouter(self, event=None):
+        """Import edge results evolution from macroscopic router XML file"""
+            
+        wildcards_all = "All files (*.*)|*.*"
+        wildcards_obj = "Marouter load xml files (*.out.mrload.xml)|*.xml|Xml files (*.xml)|*.xml"
+        wildcards = wildcards_obj+"|"+wildcards_all
+        
+        # Finally, if the directory is changed in the process of getting files, this
+        # dialog is set up to change the current working directory to the path chosen.
+        dlg = wx.FileDialog(
+            self._mainframe, message="Open results file",
+            defaultDir = self.get_scenario().get_workdirpath(), 
+            #defaultFile = os.path.join(scenario.get_workdirpath(), scenario.format_ident()+'.obj'),
+            wildcard=wildcards,
+            style=wx.OPEN | wx.CHANGE_DIR
+            )
+
+        # Show the dialog and retrieve the user response. If it is the OK response, 
+        # process the data.
+        if dlg.ShowModal() == wx.ID_OK:
+            # This returns a Python list of files that were selected.
+            filepath = dlg.GetPath()
+            if len(filepath)>0:
+                if self._simulation.results is not None:
+                    self._simulation.results.edgeresultsevolution.import_marouterxml(filepath)
+                    self._mainframe.browse_obj(self._simulation.results.edgeresultsevolution)
+                
+                
+
+        # Destroy the dialog. Don't do this until you are done with it!
+        # BAD things can happen otherwise!
+        dlg.Destroy()
+        
+    def on_import_edgeresultsevolution(self, event=None):
+        """Import edge results evolution from XML file"""
+            
+        wildcards_all = "All files (*.*)|*.*"
+        wildcards_obj = "Edge result xml files (*.out.edgedata.xml)|*.xml|Xml files (*.xml)|*.xml"
+        wildcards = wildcards_obj+"|"+wildcards_all
+        
+        # Finally, if the directory is changed in the process of getting files, this
+        # dialog is set up to change the current working directory to the path chosen.
+        dlg = wx.FileDialog(
+            self._mainframe, message="Open results file",
+            defaultDir = self.get_scenario().get_workdirpath(), 
+            #defaultFile = os.path.join(scenario.get_workdirpath(), scenario.format_ident()+'.obj'),
+            wildcard=wildcards,
+            style=wx.OPEN | wx.CHANGE_DIR
+            )
+
+        # Show the dialog and retrieve the user response. If it is the OK response, 
+        # process the data.
+        if dlg.ShowModal() == wx.ID_OK:
+            # This returns a Python list of files that were selected.
+            filepath = dlg.GetPath()
+            if len(filepath)>0:
+                if self._simulation.results is not None:
+                    self._simulation.results.edgeresultsevolution.import_sumoxml(filepath)
+                    self._mainframe.browse_obj(self._simulation.results.edgeresultsevolution)
+                
+                
+
+        # Destroy the dialog. Don't do this until you are done with it!
+        # BAD things can happen otherwise!
+        dlg.Destroy()
+                                    
     def on_plot_results(self, event = None):
         """Plot edge results on map using the Matplotlib plotting envitonment."""
         if self._simulation.results is None:
@@ -481,6 +609,136 @@ class WxGui(ModuleGui):
                 dlg.apply()
                 dlg.Destroy()
         
+     
+    def on_plot_evolutionresults(self, event = None):
+        """Plot edge evolution results on map using the Matplotlib plotting envitonment."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        if is_mpl:
+            resultplotter = results_mpl.EdgeResultEvolutionplotter(  self._simulation.results, 
+                                                                    logger = self._mainframe.get_logger())
+            dlg = ResultDialog(self._mainframe, resultplotter)
+                             
+            dlg.CenterOnScreen()
+        
+            # this does not return until the dialog is closed.
+            val = dlg.ShowModal()
+            #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+            #print '  status =',dlg.get_status()
+            if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+                #print ">>>>>>>>>Unsuccessful\n"
+                dlg.Destroy()
+                
+            if dlg.get_status() == 'success':
+                #print ">>>>>>>>>successful\n"
+                # apply current widget values to scenario instance
+                dlg.apply()
+                dlg.Destroy()
+        
+     
+     
+    
+    def on_plot_xy_edgeresults(self, event = None):
+        """Plot one edge result attribute versus another result attribute using matplotlib."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        if is_mpl:
+            resultplotter = results_mpl.XYEdgeresultsPlotter(  self._simulation.results, 
+                                                        logger = self._mainframe.get_logger())
+            dlg = ResultDialog(self._mainframe, resultplotter)
+                             
+            dlg.CenterOnScreen()
+        
+            # this does not return until the dialog is closed.
+            val = dlg.ShowModal()
+            #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+            #print '  status =',dlg.get_status()
+            if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+                #print ">>>>>>>>>Unsuccessful\n"
+                dlg.Destroy()
+                
+            if dlg.get_status() == 'success':
+                #print ">>>>>>>>>successful\n"
+                # apply current widget values to scenario instance
+                dlg.apply()
+                dlg.Destroy()    
+                
+    def on_plot_xy_evolutionresults(self, event = None):
+        """Plot one edge result attribute versus another edge result attribute over time intervals using matplotlib."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        if is_mpl:
+            resultplotter = results_mpl.XYEdgeresultsEvolutionPlotter(  self._simulation.results, 
+                                                        logger = self._mainframe.get_logger())
+            dlg = ResultDialog(self._mainframe, resultplotter)
+                             
+            dlg.CenterOnScreen()
+        
+            # this does not return until the dialog is closed.
+            val = dlg.ShowModal()
+            #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+            #print '  status =',dlg.get_status()
+            if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+                #print ">>>>>>>>>Unsuccessful\n"
+                dlg.Destroy()
+                
+            if dlg.get_status() == 'success':
+                #print ">>>>>>>>>successful\n"
+                # apply current widget values to scenario instance
+                dlg.apply()
+                dlg.Destroy()    
+    
+    def on_plot_speedprofiles(self, event = None):
+        """Plot speed profiles using the Matplotlib plotting envitonment."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        if is_mpl:
+            resultplotter = results_mpl.SpeedprofilePlotter(  self._simulation.results, 
+                                                        logger = self._mainframe.get_logger())
+            dlg = ResultDialog(self._mainframe, resultplotter)
+                             
+            dlg.CenterOnScreen()
+        
+            # this does not return until the dialog is closed.
+            val = dlg.ShowModal()
+            #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+            #print '  status =',dlg.get_status()
+            if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+                #print ">>>>>>>>>Unsuccessful\n"
+                dlg.Destroy()
+                
+            if dlg.get_status() == 'success':
+                #print ">>>>>>>>>successful\n"
+                # apply current widget values to scenario instance
+                dlg.apply()
+                dlg.Destroy()                        
+    
+    
+    def on_plot_traveltimes(self, event = None):
+        """Plot travel times to/from specific edges using the Matplotlib plotting envitonment."""
+        if self._simulation.results is None:
+            self._simulation.results = results.Simresults(ident= 'simresults', simulation=self._simulation)
+        
+        if is_mpl:
+            resultplotter = results_mpl.TraveltimePlotter(  self._simulation.results, 
+                                                        logger = self._mainframe.get_logger())
+            dlg = ResultDialog(self._mainframe, resultplotter)
+                             
+            dlg.CenterOnScreen()
+        
+            # this does not return until the dialog is closed.
+            val = dlg.ShowModal()
+            if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+                dlg.Destroy()
+                
+            if dlg.get_status() == 'success':
+                dlg.apply()
+                dlg.Destroy()            
+                
     def on_plot_electrical_energy_results(self, event = None):
         """Plot energy results using the Matplotlib plotting envitonment."""
         if self._simulation.results is None:
@@ -540,7 +798,17 @@ class WxGui(ModuleGui):
         detectorflows = self.get_scenario().demand.detectorflows
         detectorflows.add_flows_to_edgeresults(self._simulation.results.edgeresults)
         self._mainframe.browse_obj(self._simulation.results.edgeresults)
-            
+    
+    
+    def on_add_detectorflows_to_edgeresultsevolution(self, event=None):
+        """Add detector flow measurements to edge results evolution, these are time dependent edge flows.
+        """
+        #self._demand.detectorflows.clear()
+        #self._mainframe.browse_obj(self._demand.detectorflows)
+        detectorflows = self.get_scenario().demand.detectorflows
+        detectorflows.add_flows_to_edgeresultsevolution(self._simulation.results.edgeresultsevolution)
+        self._mainframe.browse_obj(self._simulation.results.edgeresultsevolution)
+        
     def on_sumo(self, event = None):
         """
         Set simulation parameters and simulate with SUMO micro-simulator
@@ -605,7 +873,21 @@ class WxGui(ModuleGui):
                                     )
         self.open_sumodialog_interactive()  
         
-    
+    def on_antijammer(self, event = None):
+        """Anti jam microsimulation, prevents traffic jams by real time deviation of routes"""
+        self.simulator = antijammer.Antijammer( \
+                                    scenario = self.get_scenario(), 
+                                    results = self._simulation.results,
+                                    logger = self._mainframe.get_logger(),
+                                    is_gui = True,
+                                    is_export_net = True,
+                                    is_export_poly = True,
+                                    is_export_rou = True,
+                                    is_prompt_filepaths = False,
+                                    is_quit_on_end = True,
+                                    is_start = True,
+                                    )
+        self.open_sumodialog_interactive(title = 'SUMO-Antijammer simulation')   
                                 
     def open_sumodialog(self):
         dlg = ProcessDialog(self._mainframe, self.simulator)
@@ -637,10 +919,10 @@ class WxGui(ModuleGui):
             #print 'call self._mainframe.refresh_moduleguis()'
             #self._mainframe.refresh_moduleguis()
         
-    def open_sumodialog_interactive(self):
+    def open_sumodialog_interactive(self, title = 'SUMO-Traci Dialog'):
         dlg = ProcessDialogInteractive( self._mainframe, 
                                         self.simulator,
-                                        title = 'SUMO-Traci Dialog',
+                                        title = title,
                                         func_close = self.close_sumodialog_interactive,
                                         )
                          

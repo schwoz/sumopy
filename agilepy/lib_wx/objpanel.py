@@ -600,7 +600,9 @@ class NumericWidgetContainer(AttrBase,WidgetContainer):
         Return widget to edit numeric value of attribute
         This is effectively the parametrisation of the masked.NumCtrl widget.
         """
+        
         value = self.get_value_obj()
+        #print 'NumericWidgetContainer.get_valuewidget_write  value=',value,type(value)
         # strange way to convert numpy type numbers into native python numbers
         if type(value) not in (types.IntType, types.LongType, types.FloatType, types.ComplexType):
                 value=value.tolist()
@@ -2207,7 +2209,7 @@ class TableGrid(AttrBase,gridlib.PyGridTableBase):
             #attrconf=self.attrconfigs[col]
             val=self.get_objvalue(row,col)
             mt = attrconf.metatype
-            
+            st = attrconf.struct
             
             
             
@@ -2283,6 +2285,13 @@ class TableGrid(AttrBase,gridlib.PyGridTableBase):
             #    else:
             #        return val
                     
+            elif st == 'array':
+                if type(val) == np.bool_:
+                    return val
+                if hasattr(val, '__iter__'):
+                    return attrconf.format_value(val = val)
+                else:
+                    return val
             else:
                 return val
             
@@ -2700,14 +2709,14 @@ class TabPanel(AttrBase,gridlib.Grid):
             # popup row options menu
             self._contextfunctions = {}
             #print '  configs',self.tab.get_configs(is_all=True)
-            for config in self.tab.get_configs():#(is_all=True):
+            for config in self.tab.get_configs(filtergroupnames=['rowfunctions'],is_private = True):#(is_all=True):
                 #print '  ',config.attrname,config.groupnames,'rowfunctions' in config.groupnames
-                if 'rowfunctions' in config.groupnames:
-                    item,id = menu.append_item( config.get_name(),self.on_select_rowfunction, info=config.get_info())
-                    #item,id = menu.append_item( config.name,config.get_function(), info=config.info)
-                    self._contextfunctions[id]=config.get_function()
-                    #print '  append ',config.name,id
-                    #menu.append_item( config.name,self.on_select_contextmenu, info=config.info)
+                #if 'rowfunctions' in config.groupnames:
+                item,_id = menu.append_item( config.get_name(),self.on_select_rowfunction, info=config.get_info())
+                #item,id = menu.append_item( config.name,config.get_function(), info=config.info)
+                self._contextfunctions[_id]=config.get_function()
+                #print '  append ',config.name,_id
+                #menu.append_item( config.name,self.on_select_contextmenu, info=config.info)
         
         #default
         menu.append_item(   'Export to CSV...',self.on_export_csv,
@@ -2732,17 +2741,17 @@ class TabPanel(AttrBase,gridlib.Grid):
         table = self.GetTable()
         row = popupmenu.get_row()
         col = popupmenu.get_col()
-        id, attrconf = table.get_id_attrconf(row, col)
+        _id, attrconf = table.get_id_attrconf(row, col)
         id_menu = event.GetId()
-        #print 'on_select_contextmenu id_menu,id, attrconf',id_menu,id, attrconf
+        #print 'on_select_contextmenu id_menu,_id, attrconf',id_menu,_id, attrconf
         #print '  GetSelection',event.GetSelection()
         #print '  GetString',event.GetString()
         
         #print '  GetId',id_menu,event.Id
         #print '  GetClientObject',event.GetClientObject()
         
-        # call selected row function with row id
-        self._contextfunctions[id_menu](id)
+        # call selected row function with row _id
+        self._contextfunctions[id_menu](_id)
         
         #item = popupmenu.get_menuitem_from_id(event.GetId())# OK but not neede
         #if self._rowfunctions.has_keid_menu:
@@ -2750,7 +2759,7 @@ class TabPanel(AttrBase,gridlib.Grid):
         #    #help = item.GetHelp() 
         #    #??? menu id->name->function??????????
         #    print 'on_select_contextmenu: found function:',funcname#,getattr(table,funcname)
-        #    self._rowfunctions[id]
+        #    self._rowfunctions[_id]
         #else:
         #    print 'on_select_contextmenu: No function found'
         
@@ -4707,9 +4716,13 @@ class ObjBrowserMainframe(wx.Frame):
         wxlib.colourdb.updateColourDB()
         self.colors = wxlib.colourdb.getColourList()
 
-
+        self.__init_specific()
+        
         return None
     
+    def __init_specific(self):
+        pass
+        
     def OnAbout(self, event):
         dlg = wx.MessageDialog(self,
                                "This is a small program to demonstrate\n"

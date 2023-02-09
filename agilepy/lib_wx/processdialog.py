@@ -313,8 +313,10 @@ class ProcessDialogInteractive(ProcessDialogMixin,wx.Frame):
     def _get_buttons(self):
         if hasattr(self.process,'step'):
             buttons=[   ('Start',   self.on_start,      'Start the process!'),
-                        ('Stop',   self.on_stop,        'Stop process.'),
-                        ('Step',   self.on_singlestep,      'Make a single step.'),
+                        #('Stop',   self.on_stop,        'Stop process.'),
+                        #('Step',   self.on_singlestep,      'Make a single step.'),
+                        ('Save Options...', self.on_save_options, self.on_save_options.__doc__),
+                        ('Load Options...', self.on_load_options, self.on_load_options.__doc__),
                         ('Done',   self.on_done,        'Stop process and close window.'),
                         ]
             defaultbutton='Start'

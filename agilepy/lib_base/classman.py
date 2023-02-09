@@ -1113,7 +1113,7 @@ class Indexing:
         self.add_indices(ids, self[ids]) 
     
     def del_indices(self, ids):
-        
+        print 'del_indices ids',ids
         for _id in ids:
             self.del_index(_id)   
     
@@ -1992,14 +1992,14 @@ class Attrsman:
     def get_config(self, attrname):
         return getattr(self,attrname)# a bit risky
     
-    def get_configs(self, is_all = False, structs = None, filtergroupnames = None):
+    def get_configs(self, is_all = False, structs = None, filtergroupnames = None, is_private = False):
         #print 'get_configs',self,self._obj.ident,structs,filtergroupnames,len(self._attrconfigs)
         if is_all:
             return self._attrconfigs
         else:
             attrconfigs = []
             for attrconf in self._attrconfigs:
-                #print '  found',attrconf.attrname,attrconf.struct
+                #print '  found',attrconf.attrname,attrconf.struct,'groupnames',attrconf.groupnames
                 is_check = True
                 if (structs is not None):
                     if (attrconf.struct not in structs):
@@ -2008,7 +2008,7 @@ class Attrsman:
                 if is_check:     
                     #print '  **is_check',is_check
                     if len(attrconf.groupnames)>0:
-                       if '_private' not in attrconf.groupnames:
+                       if ('_private' not in attrconf.groupnames) | is_private:
                             #print '    not private'
                             if filtergroupnames is not None:
                                 #print '     apply filtergroupnames',filtergroupnames,attrconf.groupnames
@@ -2030,7 +2030,7 @@ class Attrsman:
     def get_obj(self):
         return self._obj
             
-    def add(self, attrconf, is_overwrite = False):
+    def add(self, attrconf, is_overwrite = False, is_prepend = False):
         """
         Add a one or several new attributes to be managed.
         kwargs has attribute name as key and Attribute configuration object
@@ -2040,7 +2040,7 @@ class Attrsman:
         
         attrname = attrconf.attrname
         #print '\n\nAttrsman.add',self.get_obj().ident,'add',attrname,self.has_attrname(attrname)
-        dir(self._obj)
+        #dir(self._obj)
         if (not self.has_attrname(attrname)) | is_overwrite:
             attrconf.set_obj(self._obj)
             attrconf.set_manager(self)
@@ -2049,7 +2049,10 @@ class Attrsman:
             setattr(self, attrname, attrconf)
             
             # append also to the list of managed objects
-            self._attrconfigs.append(attrconf)
+            if is_prepend:
+                self._attrconfigs.insert(0, attrconf)
+            else:
+                self._attrconfigs.append(attrconf)
             
             # insert in groups
             self.insert_groupnames(attrconf)
@@ -2178,7 +2181,7 @@ class Attrsman:
             
     def delete(self, attrname):
         """
-        Delete attibite with respective name
+        Delete attribute with respective name
         """
         #print '.__delitem__','attrname=',attrname
         
@@ -2206,9 +2209,10 @@ class Attrsman:
     
     def  __getstate__(self):
         #if hasattr(self,'attrname'):
-        #    print 'Attrsman.__getstate__',self.attrname,'  of  obj=',self._obj.ident
+        #    print 'Attrsman.__getstate__ of',self.attrname,'  of  obj=',self._obj.ident,'id',id(self),'id obj',id(self._obj)
+        #    
         #else:
-        #    print 'WARNING in Attrsman.__getstate__','attrname missing'
+        #    print 'WARNING in Attrsman.__getstate__',self,'attrname missing','id',id(self),'id obj',id(self._obj)
         
         
         if not hasattr(self,'_obj'):
@@ -2243,7 +2247,11 @@ class Attrsman:
                 elif attr =='_attrconfigs':
                     attrconfigs_save = []
                     for  attrconfig in self._attrconfigs:
+                        
                         if attrconfig.is_save():
+                            #print '    save',attrconfig.attrname
+                            #if attrconfig.struct == 'array':
+                            #    print '      size =',len(self)
                             attrconfigs_save.append(attrconfig)
                     state[attr] = attrconfigs_save
                     
@@ -2296,11 +2304,11 @@ class Attrsman:
         Called after set state.
         Link external states.
         """
-        #print 'init_postload_external',self._obj.get_ident()
+        #print 'Attrsman.init_postload_external',self._obj.get_ident()
         
             
         for attrconfig in  self.get_configs(is_all = True):
-            #print '  ***',attrconfig.attrname,attrconfig.metatype
+            #print '  call',attrconfig.attrname,attrconfig.metatype
             attrconfig.init_postload_external()
 
     
@@ -2685,10 +2693,15 @@ class BaseObjman:
         pass
     
     def set_version(self,version):
+        
         self._version = version
 
     def get_version(self):
-        return self._version
+        if hasattr(self, '_version'):
+            return self._version
+        else:
+            # for compatibility
+            return 0.0
     
     #def _upgrade_version(self):
     #    pass
@@ -3044,7 +3057,7 @@ class BaseObjman:
         Called after set state.
         Link internal states and call constant settings.
         """
-        print 'BaseObjman.init_postload_internal',self.ident,'parent:'
+        #print 'BaseObjman.init_postload_internal',self.ident,'parent:'
         #if parent is not None:
         #    print parent.ident
         #else:
@@ -3065,7 +3078,7 @@ class BaseObjman:
         """
         
         #self._is_root =  is_root
-        print 'init_postload_external',self.ident#,self._is_root 
+        #print 'init_postload_external',self.ident#,self._is_root 
         # set default logger
         self.set_logger(Logger(self))
         #for child in self.childs.values():

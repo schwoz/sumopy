@@ -1,5 +1,11 @@
 from classman import *
 import numpy as np
+
+TYPES_INT = (np.int32, np.int64,types.IntType, types.LongType)
+TYPES_FLOAT = (np.float32, np.float64, types.FloatType, types.ComplexType)
+
+   
+                    
 class ArrayConfMixin:
     def __init__(self, attrname, default, dtype=None, is_index= False, **attrs):
         self._is_index = is_index 
@@ -79,7 +85,10 @@ class ArrayConfMixin:
         """
         Multiple row delete method used by attrsman
         """
+        if self._is_index:
+            self.del_indices(ids_del)
         self.set_value(self.get_value()[inds_remain])
+        
     
     def delete_ind(self, i):
         # called from del_rows
@@ -152,6 +161,7 @@ class ArrayConfMixin:
         self.plugin.exec_events_ids(EVTSETITEM, _ids)
                     
     def add(self, ids, values = None):
+        
         if not hasattr(ids, '__iter__'):
             _ids = [ids]
             if values is not None:
@@ -242,7 +252,8 @@ class ArrayConfMixin:
     
     
                 
-    def format_value(self,_id, show_unit = False, show_parentesis=False):
+    def format_value(self,_id = -1, val = None, show_unit = False, show_parentesis=False, sep_col = ' '):
+        
         # TODO: handle also linked ids, etc...
         if show_unit:
             unit = ' '+self.format_unit(show_parentesis)
@@ -254,12 +265,15 @@ class ArrayConfMixin:
         #self.max = maxval
         #self.digits_integer = digits_integer
         #self.digits_fraction = digits_fraction
-        val = self[_id]
-        tt = type(val)
-
-        if tt in (np.int,np.int32,np.float64):
-            return str(val)+unit
+        if _id != -1:
+            val = self[_id]
             
+        tt = type(val)
+        #print 'ArrayConfMixin.format_value',self.attrname, '_id',_id ,'val',tt,tt == np.bool_,str(val), tt ==types.DictionaryType#,val,self[_id]
+        if tt in (np.int,np.int32,np.int64,np.bool_):
+            return str(val)+unit
+
+              
         elif tt in (np.float,np.float32,np.float64):
             if hasattr(self,'digits_fraction'):
                 digits_fraction = self.digits_fraction
@@ -270,9 +284,16 @@ class ArrayConfMixin:
             #print 'format_value df=',digits_fraction,'val=',val
             
             return s%(val)+unit
-                
+        
+        
+        elif (tt not in STRINGTYPES) & hasattr(val, '__len__'):
+                if len(val)>0:
+                    # alternative  sep_col.join(str(p) for p in val)
+                    return sep_col.join(map(str, val))
+                else:        
+                    return ''
         else:
-            return str(val)+unit
+                return str(val)+unit
     
    
 class ArrayConf(ArrayConfMixin,ColConf):
@@ -538,7 +559,7 @@ class IdsArrayConf(ArrayConfMixin,ColConf):
         AttrConf.init_postload_internal(self, man, obj)
         #print 'IdsConf.init_postload_internal',self.attrname,self.get_value().dtype,self.get_value().dtype == np.int64
         if self.get_value().dtype == np.int64:
-            print 'WARNING in init_postload_internal: convert ids array to 32 bit'
+            #print 'WARNING in init_postload_internal: convert ids array to 32 bit'
             self.set_value(np.array(self.get_value(),dtype = np.int32) )
         #if self._is_child:
         #    print '  make sure children get initialized'
@@ -1167,12 +1188,13 @@ class Arrayman(Tabman):
         
         
     def del_rows(self, ids_del):
-        #print '\n\ndel_rows',self.ident,ids_del
+        print '\n\ndel_rows',self.ident,len(ids_del),'rows'
         # remaining index
         if self.plugin:
                 self.plugin.exec_events_ids(EVTDELITEM,ids_del)
                 
         inds_remain = np.ones(len(self), dtype = np.bool_)
+        print '  len(inds_remain)',len(inds_remain),'len(self)',len(self)
         inds_remain[self._inds[ids_del]] = False
         inds_remain = np.flatnonzero(inds_remain)
         for colconfig in self._colconfigs:
@@ -1285,7 +1307,7 @@ class ArrayObjman(Arrayman, TableMixin):
         # this should no longer happen in the future as ind and ids
         # have been formatted propperly
         if attrman._inds.dtype != np.int32:
-            print 'WARNING: 64 bit ids and inds...will adjust to 32 bit'
+            #print 'WARNING: 64 bit ids and inds...will adjust to 32 bit'
             attrman._inds = np.array(attrman._inds, dtype = np.int32)
             attrman._ids = np.array(attrman._ids, dtype = np.int32)
             
