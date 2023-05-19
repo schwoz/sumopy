@@ -2005,10 +2005,15 @@ class BikenetworkCompleter(Process):
         edges = self.parent.edges
         nodes = self.parent.nodes
         lanes = self.parent.lanes
+        modes = self.parent.modes
         connections = self.parent.connections
+        roundabouts = self.parent.roundabouts
         ids_edge = edges.get_ids()
         allow_cycloped = [self.id_mode_bike,self.id_mode_ped]
         ids_edge_update = []
+        nodeset_roundabouts = set([])
+        for ids_node in roundabouts.ids_nodes[roundabouts.get_ids()]:
+            nodeset_roundabouts.update(ids_node)
 
         for id_edge, id_sumo, type_spread, shape, \
             n_lanes, ids_lane,priority,id_fromnode, id_tonode\
@@ -2023,7 +2028,9 @@ class BikenetworkCompleter(Process):
                                             edges.ids_tonode[ids_edge],
                                             ):
 
-            if (n_lanes<=self.n_lanes_max)&(priority<=self.priority_max):
+            if (n_lanes<=self.n_lanes_max)&(priority<=self.priority_max)\
+                    &(id_fromnode not in nodeset_roundabouts)\
+                    &(id_tonode not in nodeset_roundabouts):
                 # a footpath ha been made accessible for bikes
                 # check if footpath is a on-way
                 ids_incoming = nodes.ids_incoming[id_fromnode]
@@ -2083,6 +2090,7 @@ class BikenetworkCompleter(Process):
                                             width = 0.5*lanewidths,
                                             speed_max = self.speed_max_bike,
                                             ids_modes_allow = ids_modes_allow)
+##                                            id_mode = modes.get_id_mode("army"))
 
                                 edges.ids_lanes[id_edge_opp] = [id_lane_opp]
                                 ids_edge_update.append(id_edge_opp)
@@ -2117,6 +2125,7 @@ class BikenetworkCompleter(Process):
                                     width = self.width_bikelane_opp,
                                     speed_max = self.speed_max_bike_opp,
                                     ids_modes_allow = allow_cycloped,
+                                    id_mode = modes.get_id_mode("passenger")
                                     )
 
                         edges.ids_lanes[id_edge_opp] = [id_lane_opp]
@@ -2160,6 +2169,7 @@ class BikenetworkCompleter(Process):
                                     width = self.width_bikelane_opp,
                                     speed_max = self.speed_max_bike_opp,
                                     ids_modes_allow = allow_cycloped,
+                                    id_mode = modes.get_id_mode("passenger")
                                     )
 
                         edges.ids_lanes[id_edge_opp] = [id_lane_opp]

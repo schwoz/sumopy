@@ -15,7 +15,103 @@ from coremodules.misc import shapeformat
 
      
         
-       
+class PoiDrawings(Triangles):
+    def __init__(self, ident, pois, parent,   **kwargs):
+        
+
+        
+        Triangles.__init__(  self, ident,  parent, 
+                            name = 'POI drawings', 
+                            is_fill = True,
+                            is_outline = True,
+                            linewidth = 4,
+                            **kwargs)
+        
+        
+        
+        
+                                        
+        self.delete('vertices')
+        
+        
+        self.add(cm.AttrConf(  'color_default', np.array([0.0,0.0, 0.7, 1.0], np.float32),
+                                        groupnames = ['options'],
+                                        perm='wr', 
+                                        metatype = 'color',
+                                        name = 'Default color', 
+                                        info = 'Default color.',
+                                        ))
+                                        
+        
+        self.add(cm.AttrConf(  'size', 10.0,
+                                        groupnames = ['options'],
+                                        perm='wr',
+                                        is_save = True,
+                                        is_plugin = False,
+                                        name = 'Size',
+                                        unit = 'm',
+                                        info = 'Size of a POI in meter.',
+                                        ))
+                                                                        
+        self.set_pois(pois)
+        
+        
+        
+        
+        
+    def get_netelement(self):
+        return self._pois
+    
+    def get_vertices_array(self):
+        #print 'get_vertices_array',len(self._pois.get_ids())
+        #print '  vertices',self._parking.vertices.value
+        ids = self._pois.get_ids()
+        if len(ids)>0:
+            vertices = np.zeros((len(ids),3,3),dtype=np.float32)
+            d = self.size.get_value()
+            #print '  vertices.shape',vertices.shape
+            #print '  self._pois.coords[ids].shape',self._pois.coords[ids].shape
+            #print '  np.array([0.5*d,d,0],dtype=np.float32).shape',np.array([0.5*d,d,0],dtype=np.float32).shape
+            vertices[:,0,:] = self._pois.coords[ids]
+            vertices[:,1,:] = self._pois.coords[ids]+np.array([0.5*d,d,0],dtype=np.float32)
+            vertices[:,2,:] = self._pois.coords[ids]+np.array([-0.5*d,d,0],dtype=np.float32)
+            return vertices
+        else:
+            return np.zeros((0,3,3),dtype=np.float32)
+    
+    def set_netelement(self,element):
+        self.set_pois(element)
+        
+    def set_pois(self, pois):
+        #print '\nset_parking',len(parking)
+        self._pois = pois
+        if len(self)>0:
+            self.clear_rows()#self.del_rows(1*self.get_ids())
+        
+        ids = self._pois.get_ids()
+        #self._inds_map = self._parking.get_inds(ids)
+        self.add_rows(ids = ids)
+        self.update()
+        
+    def update(self, is_update = True):
+        # assumes that arrsy structure did not change
+        #print 'FacilityDrawings.update'
+        n = len(self) 
+        self.colors.value[:] = np.ones((n,4),np.float32)*self.color_default.get_value()
+        self.colors_highl.value[:] = self._get_colors_highl(self.colors.value)
+        
+ 
+        landusetypes = self._pois.get_landusetypes()
+        ids_landusetype = self._pois.ids_landusetype
+        for id_landusetype in landusetypes.get_ids():
+            #inds = np.flatnonzero(ids_landusetype == id_landusetype)
+            #color = landusetypes.colors[id_landusetype]
+            #self.colors.value[self._inds_map[inds]] = color
+            #self.colors.value[self._inds_map[np.flatnonzero(ids_landusetype == id_landusetype)]] = landusetypes.colors[id_landusetype]
+            self.colors[self._pois.select_ids(ids_landusetype.value == id_landusetype)] = landusetypes.colors[id_landusetype]
+        if is_update:
+            self._update_vertexvbo()
+            self._update_colorvbo()    
     
 
 class ParkingDrawings(Lines):
@@ -757,7 +853,10 @@ class WxGui(ModuleGui):
             #else:
             #    parkingdrawings = ParkingDrawings(self._landuse.parking, drawing)
             #    drawing.add_drawobj(parkingdrawings, layer = 50)
-                            
+            drawing.set_element('poisdraws', PoiDrawings, 
+                                    self._landuse.pois, layer = 20)
+            
+            
             neteditor.get_toolbox().add_toolclass(AddZoneTool)# will check if tool is already there
             neteditor.get_toolbox().add_toolclass(AddFacilityTool)
             neteditor.draw()
@@ -777,7 +876,32 @@ class WxGui(ModuleGui):
             info='View and browse landuse in object panel.',
             bitmap = self.get_agileicon('icon_browse_24px.png'),#,
             )
+        
+        #menubar.append_item( 'landuse/facilities/clean osm file...',
+        #    self.on_clean_osm, 
+        #    info='Cleans OSM file from strange characters. Use if you have trouble importing from OSM.',
+        #    bitmap = self.get_icon('Files-Osm-icon_24.png'),#
+        #    )
             
+        menubar.append_item( 'landuse/import from osm...',
+            self.on_import_osm, 
+            bitmap = self.get_icon('Files-Osm-icon_24.png'),#
+            )
+        
+        menubar.append_item(    'landuse/import from poly file...', 
+                                self.on_import_poly, info='Import SUMO poly xml file...',
+                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
+                                bitmap = self.get_agileicon("Document_Import_24px.png"),
+                                )
+                                
+        
+        
+        menubar.append_item(    'landuse/export to poly file...', 
+                                self.on_export_poly, info='Export landuse to SUMO poly xml file...',
+                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
+                                bitmap = self.get_agileicon("Document_Export_24px.png"),
+                                )
+                                        
         # wx.Bitmap(os.path.join(IMAGEDIR,'icon_sumo_24px.png'),wx.BITMAP_TYPE_PNG)
         menubar.append_menu( 'landuse/maps',
             bitmap = self.get_icon("map_24px.png"),
@@ -805,7 +929,10 @@ class WxGui(ModuleGui):
             bitmap = self.get_icon("fig_zone_24px.png"),
             )
         
-        
+        menubar.append_item( 'landuse/zones/generate...',
+            self.on_generate_zones, 
+            #bitmap = self.get_icon('Files-Osm-icon_24.png'),#
+            ) 
         menubar.append_item( 'landuse/zones/import from shapefile...',
             self.on_import_zones_from_shape, 
             #bitmap = self.get_icon('Files-Osm-icon_24.png'),#
@@ -825,6 +952,11 @@ class WxGui(ModuleGui):
             info='Export zones in .kml format.',
             bitmap = self.get_agileicon("Document_Export_24px.png"),#
             ) 
+        menubar.append_item(    'landuse/zones/export to shape file...', 
+                                self.on_zones_to_shapefile, 
+                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
+                                bitmap = self.get_agileicon("Document_Export_24px.png"),
+                                )
         menubar.append_item( 'landuse/zones/clear all',
             self.on_clear_zones, 
             info='Delete all zones.',
@@ -835,19 +967,7 @@ class WxGui(ModuleGui):
             bitmap = self.get_icon("city-icon_24px.png"),
             )
         
-        menubar.append_item(    'landuse/facilities/import from poly file...', 
-                                self.on_import_poly, info='Import SUMO poly xml file...',
-                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
-                                bitmap = self.get_agileicon("Document_Import_24px.png"),
-                                )
-                                
         
-        
-        menubar.append_item(    'landuse/facilities/export to poly file...', 
-                                self.on_export_poly, info='Export facilities to SUMO poly xml file...',
-                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
-                                bitmap = self.get_agileicon("Document_Export_24px.png"),
-                                )
         menubar.append_item(    'landuse/facilities/export to shape file...', 
                                 self.on_facilities_to_shapefile, 
                                 #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
@@ -858,17 +978,7 @@ class WxGui(ModuleGui):
                                 #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
                                 bitmap = self.get_agileicon("Document_Export_24px.png"),
                                 )                                            
-        menubar.append_item( 'landuse/facilities/clean osm file...',
-            self.on_clean_osm, 
-            info='Cleans OSM file from strange characters. Use if you have trouble importing from OSM.',
-            bitmap = self.get_icon('Files-Osm-icon_24.png'),#
-            )
-            
-        menubar.append_item( 'landuse/facilities/import from osm...',
-            self.on_import_osm, 
-            info='Import landuse from osm files.',
-            bitmap = self.get_icon('Files-Osm-icon_24.png'),#
-            )
+        
         
         menubar.append_item( 'landuse/facilities/generate facilities...',
             self.on_generate_facilities, 
@@ -887,11 +997,44 @@ class WxGui(ModuleGui):
             info='Find for each building the closes access to the network. This will be the point on the network where people  access the facility.',
             #bitmap = self.get_icon('Files-Osm-icon_24.png'),#
             )  
+            
+            
+        menubar.append_item( 'landuse/facilities/update facility landuse with POI',
+            self.on_update_landusetype_facilities_with_pois, 
+            ) 
+                
         menubar.append_item( 'landuse/facilities/update all facilities',
             self.on_update_facilities, 
             ) 
         menubar.append_item( 'landuse/facilities/clear all facilities',
             self.on_clear_facilities, 
+            bitmap = wx.ArtProvider.GetBitmap(wx.ART_DELETE,wx.ART_MENU),
+            ) 
+        
+        menubar.append_menu( 'landuse/Points of interest',
+            #bitmap = self.get_icon("Document_Import_24px.png"),
+            )
+        menubar.append_item(    'landuse/Points of interest/import from poly file...', 
+                                self.on_import_poly, info='Import SUMO poly xml file...',
+                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
+                                bitmap = self.get_agileicon("Document_Import_24px.png"),
+                                )
+        
+        menubar.append_item(    'landuse/Points of interest/export to poly file...', 
+                                self.on_export_poly, info='Export facilities to SUMO poly xml file...',
+                                #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU)
+                                bitmap = self.get_agileicon("Document_Export_24px.png"),
+                                )
+                                
+        menubar.append_item( 'landuse/Points of interest/guess facility',
+            self.on_guess_facilities, 
+            info='Assign the nearest facility to all POIs.',
+            #~ bitmap = wx.ArtProvider.GetBitmap(wx.ART_DELETE,wx.ART_MENU),
+            ) 
+            
+        menubar.append_item( 'landuse/Points of interest/clear POIs',
+            self.on_clear_pois, 
+            info='Delete all POIs.',
             bitmap = wx.ArtProvider.GetBitmap(wx.ART_DELETE,wx.ART_MENU),
             ) 
             
@@ -934,7 +1077,23 @@ class WxGui(ModuleGui):
             self._mainframe.refresh_moduleguis()
             #self._is_needs_refresh = True
             #self.refresh_widgets()
-            
+    def on_guess_facilities(self, event=None):
+        self._landuse.pois.guess_facilities()
+        self._mainframe.browse_obj(self._landuse.pois)
+        self._mainframe.refresh_moduleguis()
+    
+    def on_update_landusetype_facilities_with_pois(self, event=None): 
+        # should actually be a function of facilities 
+        self._landuse.pois.update_landusetype_facilities()
+        self._mainframe.browse_obj(self._landuse.facilities)
+        self._mainframe.refresh_moduleguis()
+    
+       
+    def on_clear_pois(self, event=None):
+        self._landuse.pois.clear()
+        self._mainframe.browse_obj(self._landuse.pois)
+        self._mainframe.refresh_moduleguis()
+                
     def on_import_zones_from_shape(self, event=None):
         
         """
@@ -979,7 +1138,37 @@ class WxGui(ModuleGui):
     def on_identify_closest_edge(self, event=None):
         self._landuse.facilities.identify_closest_edge()
         self._mainframe.browse_obj(self._landuse.facilities)
+        
+    def on_generate_zones(self, event=None):
+        
+        """
+        Generate Zones
+        """
+
+        proc = landuse.ZoneGenerator('zonegenerator', self._landuse.zones, logger = self._mainframe.get_logger())
+        dlg = ProcessDialog(self._mainframe, proc, immediate_apply=True)
+                         
+        dlg.CenterOnScreen()
+    
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            #print ">>>>>>>>>Unsuccessful\n"
+            dlg.Destroy()
             
+        if dlg.get_status() == 'success':
+            #print ">>>>>>>>>successful\n"
+            # apply current widget values to scenario instance
+			dlg.apply()
+			dlg.Destroy()
+            #self._landuse.zones.refresh_zoneedges()
+			self._is_needs_refresh = True
+			self._mainframe.refresh_moduleguis()
+			self._mainframe.browse_obj(self._landuse.zones)
+
+	        
     def on_make_parking(self, event=None):
         """
         Generate on road parking areas on the street network
@@ -1115,6 +1304,29 @@ class WxGui(ModuleGui):
         # BAD things can happen otherwise!
         dlg.Destroy()
         
+    def on_zones_to_shapefile(self, event = None):
+        """
+        Export facility data to shape file.
+        """
+        #print 'on_edges_to_shapefile'
+
+        dirpath = self._landuse.parent.get_workdirpath()
+        defaultFile = self._landuse.parent.get_rootfilename()+'.facil.shp'
+        wildcards_all = 'All files (*.*)|*.*|SHP files (*.shp)|*.shp'
+        dlg = wx.FileDialog(None, message='Export facilities to shapefile', 
+                            defaultDir=dirpath, 
+                            #defaultFile=defaultFile, 
+                            wildcard=wildcards_all, style=wx.SAVE | wx.CHANGE_DIR)
+        if dlg.ShowModal() == wx.ID_OK:
+            filepath = dlg.GetPath()
+
+        else:
+            return 
+        
+        shapeformat.zones_to_shapefile( self._landuse.zones,
+                                        filepath,
+                log = self._mainframe.get_logger())
+
     def on_export_zone_kml(self, event=None):
         self._landuse.zones.export_sumokml()
         self._mainframe.browse_obj(self._landuse.zones)
@@ -1126,7 +1338,8 @@ class WxGui(ModuleGui):
         self._mainframe.browse_obj(self._landuse.zones)
         self._is_needs_refresh = True
         self._mainframe.refresh_moduleguis()
-    
+   
+
     def on_generate_facilities(self, event=None):
         """
         Generates mobility plans using different strategies..
@@ -1152,7 +1365,14 @@ class WxGui(ModuleGui):
         dlg.MakeModal(True) 
         
             
-        
+    def close_process_zones(self, dlg):
+        # called before destroying the process dialog
+        print 'close_process_zones', self.proc.status
+        if self.proc.status == 'success':
+            self._mainframe.browse_obj(self._landuse.zones)
+            self._is_needs_refresh = True
+            
+            self._mainframe.refresh_moduleguis()
     
     def close_process_facilities(self, dlg):
         # called before destroying the process dialog
@@ -1244,6 +1464,7 @@ class WxGui(ModuleGui):
         self._mainframe.refresh_moduleguis()
         
     def on_import_osm(self, event = None):
+        """'Import zones, facilities and poi from osm files.',"""
         importer = landuse.OsmPolyImporter(self._landuse, logger = self._mainframe.get_logger())
         dlg = ProcessDialog(self._mainframe, importer)
                          

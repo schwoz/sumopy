@@ -6,6 +6,7 @@ import agilepy.lib_base.xmlman as xm
 from agilepy.lib_base.misc import random_choice, get_inversemap
 import results
 from simplaconfig import SimplaConfig
+from taxi import TaxiService
 
 class Simulation(cm.BaseObjman):
         def __init__(self, scenario,  name = 'Simulation', 
@@ -22,7 +23,7 @@ class Simulation(cm.BaseObjman):
             self._init_constants()
         
         def _init_attributes(self):
-            print 'Simulation._init_attributes id',id(self),self.parent.rootname#,dir(self)
+            #print 'Simulation._init_attributes id',id(self),self.parent.rootname#,dir(self)
             attrsman = self.get_attrsman()
             
             #if self.get_version()<0.2:
@@ -39,12 +40,20 @@ class Simulation(cm.BaseObjman):
             #self.results.set_save(False)                    
             #print '  self.results', self.results
             
+            # load taxi services
+            self.taxiservice = attrsman.add(cm.ObjConf(\
+                                                TaxiService(self),
+                                                is_child = True, 
+                                                groups = ['misc']
+                                                ))
+                                                
             # platooning simulation tool
             self.simplaconfig = attrsman.add(cm.ObjConf(\
                                                 SimplaConfig(self),
                                                 is_child = True, 
                                                 groups = ['misc']
                                                 ))
+                                                
         
         def _init_constants(self):
             # no! for attrs onlyself.do_not_save_attrs(['results',])# redundant is_save = False

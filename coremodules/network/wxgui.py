@@ -13,6 +13,60 @@ from  publictransportnet_wxgui import PtWxGuiMixin
 from network_editor import *
 from coremodules.misc import shapeformat
 
+from coremodules.misc.matplottools import *
+
+class Netplotter(PlotoptionsMixin, Process):
+    def __init__(self, net, name= 'Plot network', 
+                    info = "High quality plot using matplotlib",  
+                    logger = None, 
+                    **kwargs):
+        
+        self._init_common('netplotter', parent = net, name = name, 
+                            info = info, logger = logger)
+        
+        #print 'Resultplotter.__init__',results,self.parent
+        attrsman = self.get_attrsman()
+        
+        # change some defaults
+        kwargs.update({ 'color_network':np.array([0.1,0.1,1.0,1.0], dtype=np.float32),
+                        'color_nodes':np.array([0.1,1.0,1.0,1.0], dtype=np.float32),
+                        'alpha_net':0.9,
+                        'alpha_maps': 0.9,
+                        'color_facilities': np.array([0.9,0.7,0.4,0.6], dtype=np.float32),
+                        'color_borders': np.array([0.3,0.2,0.0,0.8], dtype=np.float32),
+                        'color_zones': np.array([0.2,0.8,0.2,0.1], dtype=np.float32),
+                        'alpha_zones': 0.2,
+                        'color_zoneborders': np.array([0.0,0.5,0.0,0.9], dtype=np.float32),
+                        'color_background': np.array([1,1,1,1], dtype=np.float32),
+                        #'title':
+                        })
+        
+        self.add_networkoptions(**kwargs)                                    
+        self.add_facilityoptions(**kwargs)  
+        self.add_zoneoptions(**kwargs)  
+        self.add_plotoptions_mapbase(**kwargs)
+        self.add_plotoptions_base(**kwargs)
+        self.add_save_options(**kwargs)
+
+    def show(self):
+        self.plot_net()
+        
+        
+        if self.is_save:
+            plt.subplots_adjust(left=0.12, bottom=0.1, right=0.86, top=0.9, wspace=0.2, hspace=0.2)
+            self.save_fig('net')
+        else:
+            show_plot()
+        
+    
+        
+                
+    def do(self):
+        #print 'do',self.edgeattrname
+        self.show()
+
+    def get_scenario(self):
+        return self.parent.parent
 
 class WxGui(PtWxGuiMixin, ModuleGui):
     """Contains functions that communicate between the widgets of the main wx gui
@@ -174,6 +228,7 @@ class WxGui(PtWxGuiMixin, ModuleGui):
             bitmap = self.get_icon('netedit.png'),
             )
         
+        
         menubar.append_item( 'network/edit with SUMO netedit on map...',
             self.on_netedit_on_map, 
             info="Edit network with SUMO's netedit. In addition to the network, backround maps are shown. You need to download the maps before with landuse/import maps.",
@@ -186,6 +241,11 @@ class WxGui(PtWxGuiMixin, ModuleGui):
             bitmap = self.get_icon('icon_sumo_24px.png'),#,
             )
         
+        menubar.append_item( 'network/plot with matplotlib...',
+            self.on_plot_network, 
+            bitmap = self.get_icon('icon_mpl.png'),
+            )
+        
         menubar.append_menu( 'network/tools',
             #bitmap = self.get_agileicon("Document_Export_24px.png"),
             )
@@ -195,7 +255,11 @@ class WxGui(PtWxGuiMixin, ModuleGui):
             info='Analyze connections.',
             #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU),
             )
-                                   
+        menubar.append_item( 'network/tools/analyze_edges',
+            self.on_analyze_edges, 
+            info='Analyze edges.',
+            #bitmap = wx.ArtProvider.GetBitmap(wx.ART_NORMAL_FILE,wx.ART_MENU),
+            )
         #menubar.append_item( 'network/refresh',
         #    self.on_refresh, 
         #    info='Refresh graph.',
@@ -317,9 +381,25 @@ class WxGui(PtWxGuiMixin, ModuleGui):
     def on_sumogui(self,event = None):
         self._net.call_sumogui(is_maps = True, is_poly = True)
         
-        
-        
+    def on_plot_network(self,event = None):
+        """
+        High quality plot of network and other elements.
+        """
+        p =Netplotter(self._net, logger = self._mainframe.get_logger())
+        dlg = ProcessDialog(self._mainframe, p, immediate_apply=True)
+                         
+        dlg.CenterOnScreen()
     
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            dlg.Destroy()
+            
+        if dlg.get_status() == 'success':
+            # apply current widget values to scenario instance
+            dlg.apply()
+            dlg.Destroy()
+
             
     def on_test_routing(self,event = None):
         D, P = routing.dijkstra(54,self._net.nodes, self._net.edges, set([42,82]))
@@ -616,7 +696,12 @@ class WxGui(PtWxGuiMixin, ModuleGui):
             # this should update all widgets for the new scenario!!
             #print 'call self._mainframe.refresh_moduleguis()'
             self._mainframe.refresh_moduleguis()
-    
+            
+    def on_analyze_edges(self, event = None):
+
+        self._net.edges.analyze_edges()
+        self._mainframe.browse_obj(self._net.edges)
+        
     def on_generate_random(self, event = None):
         # TODO: here we should actually replace the current network
         # so we would need a clear net method in scenario

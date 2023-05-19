@@ -55,6 +55,8 @@ microsim = sumo.Sumo(    myscenario,
                     # decide what results are needed
                     #
                     is_edgedata = True,
+                    is_result_evolution = True,
+                    time_interval_evolution = 900,
                     is_tripdata = True,
                     is_edgenoise = True,
                     is_edgesemissions = True,
@@ -91,13 +93,22 @@ microsim = sumo.Sumo(    myscenario,
 microsim.do() # now open SUMO and run simulation
 
 
+
+    
+# import all results from xml and put them into myscenario.simulation.results
+microsim.import_results()
+
 if resultfilepath is not None:
     print 'saving results in',resultfilepath
     myscenario.simulation.results.save(resultfilepath)
     
-# import all results from xml and put them into myscenario.simulation.results
-microsim.import_results()
+
+
 edgeres = myscenario.simulation.results.edgeresults
+edgeres_evolution = myscenario.simulation.results.edgeresultsevolution
+
+#val = edgeres_evolution.entered[id_edge][interval]
+
 tripres =  myscenario.simulation.results.tripresults
 
 edgeres.export_csv(rootfilepath+'.edgeres.csv', 

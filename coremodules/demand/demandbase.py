@@ -374,10 +374,25 @@ class DemandobjMixin:
     
     def import_routes_xml(self, routefilepath, **kwargs):
         """
-        Import routes from filepath an store them somwhere.
+        Import routes from filepath and store them somwhere.
         Demand object specific.
         """
         
+        pass
+    
+    def set_routes_sumo(self, ids_veh_sumo, ids_edges_sumo):
+        """
+        Sets already existing routes.
+        Keys are an array with SUMO IDs of the vehicles.
+        Routes are represented as an array of lists of SUMO edge IDs
+        """
+        pass
+        
+    def import_routealternatives_xml(self, routefilepath, **kwargs):
+        """
+        Import route alternatives from filepath and store them somwhere.
+        Demand object specific.
+        """
         pass
 
 class TripCounter(handler.ContentHandler):
@@ -397,7 +412,7 @@ class TripCounter(handler.ContentHandler):
 class TripReader(handler.ContentHandler):
     """Reads trips from trip or route file into trip table"""
 
-    def __init__(self, trips,  n_trip, vtype_default = None):
+    def __init__(self, trips,  n_trip, vtype_default = None, id_vtype_default = None):
         #print 'RouteReader.__init__',demand.ident
         self._trips = trips
         demand = trips.parent
@@ -407,9 +422,14 @@ class TripReader(handler.ContentHandler):
         self._ids_vtype_sumo = demand.vtypes.ids_sumo
         self._modemap = net.modes.names.get_indexmap()
         self._get_vtype_for_mode = demand.vtypes.get_vtype_for_mode
+        
+        
+        if vtype_default is not None:
+                id_vtype_default = demand.vtypes.ids_sumo.get_id_from_index(vtype_default)
 
+                
         if id_vtype_default is None:
-            self._id_vtype_default = self.get_ids()[0]
+            self._id_vtype_default = demand.vtypes.get_ids()[0]
         else:
             self._id_vtype_default = id_vtype_default
 
@@ -476,7 +496,7 @@ class TripReader(handler.ContentHandler):
 
             self._id_sumoveh_current = attrs['id']
             self.ids_sumo[self._ind_trip] = self._id_sumoveh_current
-            print 'startElement ids_vtype',attrs['type'], self._ids_vtype_sumo.get_id_from_index(str(attrs['type']))
+            #print 'startElement ids_vtype',attrs['type'], self._ids_vtype_sumo.get_id_from_index(str(attrs['type']))
 
             self.ids_vtype[self._ind_trip] = self._get_id_vtype(attrs)
             self.times_depart[self._ind_trip] = int(float(attrs['depart']))
@@ -547,36 +567,40 @@ class TripReader(handler.ContentHandler):
         return ids_trips
 
 class RouteCounter(handler.ContentHandler):
-    """Parses a SUMO route XML file and counts trips."""
+    """Parses a SUMO route XML file and counts trips routes and other stuff."""
 
     def __init__(self):
         self.n_veh = 0
         self.n_pers = 0
-        #self.n_rou = 0
+        self.n_rou = 0
+        
 
     def startElement(self, name, attrs):
-        #print 'startElement',name,self.n_trip
+        #print 'startElement',name,'n_veh',self.n_veh,self.n_pers
         if name == 'vehicle':
             self.n_veh += 1
         elif name == 'person':
             self.n_pers += 1
-        #elif name == 'route':
-        #    if attrs.has_key('id'):
-        #        self.n_rou += 1
+        elif name == 'route':
+            if attrs.has_key('id'):
+                self.n_rou += 1
+        
 
 
+        
+        
 class RouteReader(TripReader):
     """Reads trips from trip or route file into trip table"""
 
     def __init__(self, trips,  counter):
-        #print 'RouteReader.__init__',demand.ident
+        
         self._trips = trips
         n_veh = counter.n_veh
         n_per = counter.n_pers
         #n_rou = counter.n_rou
         n_trip = n_veh+n_per
         demand = trips.parent
-
+        print 'RouteReader.__init__',demand.ident,'reading',n_trip,'routes'
         net = demand.get_scenario().net
         self._modemap = net.modes.names.get_indexmap()
         self._get_vtype_for_mode = demand.vtypes.get_vtype_for_mode
@@ -588,6 +612,8 @@ class RouteReader(TripReader):
         self.ids_sumo[:] = ''
         self.ids_vtype = np.zeros(n_trip, np.int32)
         self.times_depart = np.zeros(n_trip, np.int32)
+        self.times_arrival = np.zeros(n_trip, np.int32)
+        self.type = np.zeros(n_trip, np.object)
         self.ids_edge_depart = np.zeros(n_trip, np.int32)
         self.ids_edge_arrival = np.zeros(n_trip, np.int32)
         self.inds_lane_depart = np.zeros(n_trip, np.int32)
@@ -624,7 +650,13 @@ class RouteReader(TripReader):
             self.ids_vtype[self._ind_trip] = self.ids_vtype[self._ind_trip] = self._get_id_vtype(attrs)
 
             self.times_depart[self._ind_trip] = int(float(attrs['depart']))
-
+            if attrs.has_key('arrival'):
+                self.times_arrival[self._ind_trip] = int(float(attrs['arrival']))
+            else:
+                # duarouter is not calculating arrival time in results!
+                self.times_arrival[self._ind_trip] = 0.0
+                
+            self.type[self._ind_trip] = attrs['type']
             if attrs.has_key('from'):
                 self.ids_edge_depart[self._ind_trip] = self._ids_edge_sumo.get_id_from_index(str(attrs['from']))
             if attrs.has_key('to'):
@@ -718,6 +750,8 @@ class RouteReader(TripReader):
             inds = np.arange(len(self.ids_sumo))
         return {'ids_sumo' : self.ids_sumo[inds],
                 'times_depart' : self.times_depart[inds],
+                'times_arrival' : self.times_arrival[inds],
+                'type' : self.type[inds],
                 'ids_edge_depart' : self.ids_edge_depart[inds],
                 'ids_edge_arrival' : self.ids_edge_arrival[inds],
                 'inds_lane_depart' : self.inds_lane_depart[inds],
@@ -726,41 +760,216 @@ class RouteReader(TripReader):
                 'inds_lane_arrival' : self.inds_lane_arrival[inds],
                 'positions_arrival' : self.positions_arrival[inds],
                 'speeds_arrival' : self.speeds_arrival[inds],
+                'ids_edges': self.routes[inds]
                 }
 
     def insert_routes(self, is_generate_ids = True, is_add = False, is_overwrite_only = False):
-        print 'TripReader.make_routes is_generate_ids',is_generate_ids, 'is_add',is_add,'is_overwrite_only',is_overwrite_only
+        print 'TripReader.insert_routes is_generate_ids',is_generate_ids, 'is_add',is_add,'is_overwrite_only',is_overwrite_only
         
-        if is_overwrite_only:
+        # self._trips is scenario trip database
+        # self.ids_sumo is a list of SUMO IDs read from xml file
+        
+        if is_overwrite_only & (not is_add):
             is_generate_ids = False
-            # get trip ids from xml file
-            # ony import routes from existing sumo ids
-            inds = np.flatnonzero(np.array(self._trips.ids_sumo.has_indices(self.ids_sumo)))
-            #print '  self.ids_sumo',self.ids_sumo[inds]
-            #print '  inds',inds
-            ids_trip =  np.array(self._trips.ids_sumo.get_ids_from_indices(self.ids_sumo[inds]),dtype=np.int32)
             is_add = False
-            
-        if is_add:
-            #is_generate_ids = False
             # get trip ids from xml file
+            # ony import routes ids from existing sumo ids
             
-            inds = np.flatnonzero(self.ids_sumo!= '')# ony import routes from specified sumo ids
-            #print '  self.ids_sumo',self.ids_sumo[inds]
-            #print '  inds',inds
-            ids_trip = np.array( self._trips.ids_sumo.get_ids_from_indices(self.ids_sumo[inds]),dtype=np.int32)
+            # this is index of self.ids_sumo to be overwritten
+            inds = np.flatnonzero(np.array(self._trips.ids_sumo.has_indices(self.ids_sumo)))
+            #print '  overwrite trip ids_sumo',self.ids_sumo[inds]
             
-        if (not is_add)&(not is_overwrite_only) & is_generate_ids:
-            inds = np.arange(len(self.routes))
-            ids_trip = None
+            ids_trip =  np.array(self._trips.ids_sumo.get_ids_from_indices(self.ids_sumo[inds]),dtype=np.int32)
+            #print '  ids_trip',ids_trip
+            #print '   n_trips',len(ids_trip)
             
-        #print '  ids_trip',ids_trip
-        ids_routes, ids_trips = self._trips.make_routes( self.ids_vtype[inds],
-                                            is_generate_ids = is_generate_ids,
-                                            routes = self.routes[inds],
-                                            ids_trip = ids_trip,
-                                            is_add = is_add,
-                                            **self._get_kwargs(inds=inds)
-                                            )
+            ids_routes, ids_trip = self._trips.make_routes( self.ids_vtype[inds],
+                                                    #is_generate_ids = is_generate_ids,# depricated
+                                                    routes = self.routes[inds],
+                                                    ids_trip = ids_trip,
+                                                    is_add = is_add,
+                                                    **self._get_kwargs(inds=inds)
+                                                    )
+            #print '  ids_routes',ids_routes
+            
+        else:    
+            if is_add:
+                # here we add the newly read routes as route alternatives
+                
+                #is_generate_ids = False
+                # get trip ids from xml file
+                
+                inds = np.flatnonzero(self.ids_sumo!= '')# ony import routes from specified sumo ids
+                #print '  self.ids_sumo',self.ids_sumo[inds]
+                #print '  inds',inds
+                ids_trip = np.array( self._trips.ids_sumo.get_ids_from_indices_save(self.ids_sumo[inds]),dtype=np.int32)
+                inds_valid = np.array(ids_trip,dtype = np.int32)>-1
+                
+                ids_routes, ids_trip = self._trips.make_routes( self.ids_vtype[inds[inds_valid]],
+                                                    #is_generate_ids = is_generate_ids,# depricated
+                                                    routes = self.routes[inds[inds_valid]],
+                                                    ids_trip = ids_trip[inds_valid],
+                                                    is_add = is_add,
+                                                    **self._get_kwargs(inds=inds[inds_valid])
+                                                    )
+                
+            if (not is_add) & is_generate_ids:
+                # here we generate new trips and set current route
+                
+                inds = np.arange(len(self.routes))
+                ids_trip = None
+                
+                #print '  ids_trip',ids_trip
+                print '   n_trips',len(self.routes)
+                ids_routes, ids_trip = self._trips.make_routes( self.ids_vtype[inds],
+                                                    is_generate_ids = is_generate_ids,
+                                                    routes = self.routes[inds],
+                                                    ids_trip = ids_trip,
+                                                    is_add = is_add,
+                                                    **self._get_kwargs(inds=inds)
+                                                    )
 
-        return ids_routes, ids_trips
+        return ids_routes, ids_trip
+
+class RouteAlternativesReader(RouteReader):
+    """Reads alternative routes from XML file"""
+    # <vehicle id="ptline.751.0" depart="78040.00" type="bus" fromTaz="gneE17" toTaz="149916593" departLane="free" departSpeed="max">
+    #    <routeDistribution>
+    #        <route cost="221.68" probability="0.6" edges="gneE17 28511775#0 28511775#4 149955196#0 149955196#1 149955196#2 26486220#0 26486220#2 26486228#1 479678162#0 479678162#1 26466212#0 26466212#1 26466212#2 26466212#3 26466212#4 26466212#5 150011437#1 150011437#2 150011437#3 149916610#0 149916610#1 808909663 808909662 -617824876#8 -617824876#6 -617824876#5 -617824876#3 -617824876#0 -400796239#12 -400796239#11 -400796239#9 -400796239#8 -400796239#7 -400796239#6 -400796239#0 -400796237#9 -400796237#8 -400796237#7 -400796237#6 -400796237#5 -400796237#4 -400796237#3 -400796237#2 -149916604 -26465947 -149955201 -455561979#7 -455561979#5 -455561979#3 -455561979#2 -455561979#1 -149916589#7 -149916589#6 -149916589#5 -149916589#4 -149916589#3 -149916589#2 -149916589#1 26466146#1 26466146#2 26466146#3 26466146#5 685786963 685786962 149916592#0 149916592#1 149916592#2 149916592#3 149916593"/>
+    #        <route cost="226.78" probability="0.4" edges="gneE17 28511775#0 28511775#4 149955196#0 149955196#1 149955196#2 26486220#0 26486220#2 26486228#1 479678162#0 479678162#1 26466212#0 26466212#1 26466212#2 26466212#3 26466212#4 26466212#5 150011437#1 150011437#2 150011437#3 149916610#0 149916610#1 808909663 808909662 -617824876#8 -617824876#6 -617824876#5 -617824876#3 -617824876#0 -400796239#12 -400796239#11 -400796239#9 -400796239#8 -400796239#7 -400796239#6 -400796239#0 -400796237#9 -400796237#8 -400796237#7 -400796237#6 -400796237#5 -400796237#4 -400796237#3 -400796237#2 -149916604 -26465947 -149955201 -455561979#7 -455561979#5 -455561979#3 -455561979#2 -455561979#1 -149916589#7 -149916589#6 -149916589#5 -149916589#4 -149916589#3 -149916589#2 -149916589#1 26466146#1 26466146#2 26466146#3 26466146#5 685786963 685786962 149916592#0 149916592#1 149916592#2 149916592#3 149916593"/>
+    #    </routeDistribution>
+    # </vehicle>
+    # 
+    # 
+    
+    def __init__(self, trips,  counter):
+        
+        
+        self._trips = trips
+        n_veh = counter.n_veh
+        n_per = counter.n_pers
+        #n_rou = counter.n_rou
+        n_trip = n_veh+n_per
+        demand = trips.parent
+        print 'RouteAlternativesReader.__init__',demand.ident,'reading',n_trip,'routes'
+        net = demand.get_scenario().net
+        self._modemap = net.modes.names.get_indexmap()
+        self._get_vtype_for_mode = demand.vtypes.get_vtype_for_mode
+
+        self._ids_vtype_sumo = demand.vtypes.ids_sumo
+        self._ids_edge_sumo = net.edges.ids_sumo
+
+        self.ids_sumo = np.zeros(n_trip, np.object)
+        self.ids_sumo[:] = ''
+        self.ids_vtype = np.zeros(n_trip, np.int32)
+        self.times_depart = np.zeros(n_trip, np.int32)
+        
+        # this is an array of lists (the route  alternatives) of lists (the routes)
+        self.routes = np.zeros(n_trip, np.object)
+        
+        # this is an array of lists (the route  alternatives) of floats (the route costs)
+        self.costs = np.zeros(n_trip, np.object)
+        
+        # this is an array of lists (the route  alternatives) of floats (the route probabilities)
+        self.probabilities = np.zeros(n_trip, np.object)
+        
+        self._ind_trip = -1
+        
+        # this is a list (the route  alternatives) of lists (the routes)
+        self._ids_sumoedges_current = []
+        #self._costs_current = []
+        #self._probabilities_current = []
+        
+        self._id_sumoveh_current = None
+
+    def startElement(self, name, attrs):
+
+        #print 'startElement',name
+        if name == 'vehicle':
+            #print '  startElement',attrs['id'],attrs['depart']
+            self._ind_trip += 1
+
+            self._id_sumoveh_current = attrs['id']
+            self.ids_sumo[self._ind_trip] = self._id_sumoveh_current
+            #print 'startElement ids_vtype',attrs['type'], self._ids_vtype_sumo.get_id_from_index(str(attrs['type']))
+            ind = self._ind_trip
+            self.ids_vtype[ind] = self.ids_vtype[self._ind_trip] = self._get_id_vtype(attrs)
+
+            self.times_depart[ind] = int(float(attrs['depart']))
+            
+                
+        if name == 'routeDistribution': 
+           ind = self._ind_trip
+           self.routes[ind] = []
+           self.costs[ind]  = []
+           self.probabilities[ind]  = []
+           #self._ids_sumoedges_current = []
+           #self._costs_current = []
+           #self._probabilities_current = []
+
+
+        if name == 'route':
+                if (self._id_sumoveh_current is not None):
+                    ind = self._ind_trip
+                    self.costs[ind].append(float(attrs['cost']))
+                    self.probabilities[ind].append(float(attrs['probability']))
+                    
+                    ids_edge = []
+                    for id_sumoedge in attrs.get('edges', '').split(' '):
+                        if not id_sumoedge in ('',' ',','):
+                            if self._ids_edge_sumo.has_index(id_sumoedge):
+                                ids_edge.append(self._ids_edge_sumo.get_id_from_index(id_sumoedge.strip()) )
+                    self.routes[ind].append(ids_edge)
+                    
+                    #self._ids_sumoedges_current.append(attrs.get('edges', ''))
+            
+        
+    def endElement(self, name):
+
+        if name == 'vehicle':
+            #print 'endElement',name,self._id_sumoveh_current
+            if (self._id_sumoveh_current is not None):
+                self._id_sumoveh_current = None
+                
+    def insert_routes(self, is_fastest, is_add = False):
+        # TODO: we can also choose to import all alternatives and probabilities with is_add=True
+        n_route = len(self.ids_sumo)
+        print 'RouteAlternativesReader.insert_routes is_fastest',is_fastest,'n_route',n_route
+        
+        routes_chosen  = np.zeros(n_route, np.object)
+        for ind, routes, costs, probs in zip(xrange(n_route),self.routes, self.costs, self.probabilities):
+            if is_fastest:
+                ind_route = costs.index(min(costs))
+            else:
+                ind_route = costs.index(max(probs))
+             
+            routes_chosen[ind] =  routes[ind_route]        
+        
+        if 1:
+
+            # get trip ids from xml file
+            # ony import routes ids from existing sumo ids
+            
+            # this is index of self.ids_sumo to be overwritten
+            inds = np.flatnonzero(np.array(self._trips.ids_sumo.has_indices(self.ids_sumo)))
+            #print '  overwrite trip ids_sumo',self.ids_sumo[inds]
+            
+            ids_trip =  np.array(self._trips.ids_sumo.get_ids_from_indices(self.ids_sumo[inds]),dtype=np.int32)
+            #print '  ids_trip',ids_trip
+            #print '   n_trips',len(ids_trip)
+            
+            ids_routes, ids_trip = self._trips.make_routes( self.ids_vtype[inds],
+                                                    #is_generate_ids = is_generate_ids,# depricated
+                                                    routes = routes_chosen[inds],
+                                                    ids_trip = ids_trip,
+                                                    is_add = is_add,
+                                                    )
+            #print '  ids_routes',ids_routes
+            
+
+
+        return ids_routes, ids_trip
+        
+        
+        
+ 

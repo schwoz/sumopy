@@ -339,7 +339,7 @@ class WxGui(    ModuleGui):
         dependent on the availability of data. 
         """
         scenario = self.get_scenario()
-        print 'prtgui.refresh_widgets',self._simulation != scenario.simulation
+        #print 'prtgui.refresh_widgets',self._simulation != scenario.simulation
         
             
         is_refresh = False

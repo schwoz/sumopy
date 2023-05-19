@@ -308,7 +308,7 @@ class CmlMixin:
                 print '  option',attrconfig.attrname,attrconfig.groupnames,'is path',attrconfig.get_metatype() in self.pathmetatypes,'has cmlmap',hasattr(attrconfig,'cmlvaluemap')
                 is_enabled = True
                 if hasattr(attrconfig, 'is_enabled'):
-                    #print ' is_enabled=',attrconfig.is_enabled(self), attrconfig.get_value()
+                    print ' is_enabled=',attrconfig.is_enabled(self), attrconfig.get_value()
                     is_enabled = attrconfig.is_enabled(self)
                 if is_enabled: # disabeled options are simply not added
                     if hasattr(attrconfig,'cmlvaluemap'):
@@ -333,7 +333,7 @@ class CmlMixin:
         self._command = cml
     
     
-    def get_cml(self, is_changecwd = False):
+    def get_cml(self, is_changecwd = False, is_without_command = False):
         """
         Returns commandline with all options.
         To be overridden by costum class.
@@ -343,11 +343,14 @@ class CmlMixin:
         options = self.get_options()
         optionstr = options.get_optionstring()
         print 'get_cml command',self._command,'workdirpath',self.workdirpath
-        if self.workdirpath is None:
-                cml = self._command + optionstr
+        if True:#self.workdirpath is None:
+            if is_without_command:
+                cml = optionstr
+            else:
+                cml = P+self._command+P + optionstr
         else:
                 cml = 'cd '+P+self.workdirpath+P+' ;'\
-                        + self._command +  optionstr
+                        + P+self._command+P +  optionstr
         
         #print '  now call get_optionstring',options.get_optionstring
         return cml
@@ -355,15 +358,25 @@ class CmlMixin:
     def run_cml(self, cml = None):
         if cml is None:
             cml = self.get_cml()
-        attrsman = self.get_attrsman()    
-        self._subprocess = subprocess.Popen(cml, shell=True)
+        attrsman = self.get_attrsman()
+        if self.workdirpath is not None:
+            wd = self.workdirpath
+            #    os.chdir(self.workdirpath)
+            self._subprocess = subprocess.Popen(cml, shell=True, cwd = wd)
+            
+        else:
+            wd = os.getcwd()
+            self._subprocess = subprocess.Popen(cml, shell=True)
+          
         attrsman.pid.set(self._subprocess.pid)
         attrsman.status.set('running')
         print 'run_cml cml=',cml
-        print '  pid = ',self.pid
+        print '  pid = ',self.pid,'cwd',wd
         if not self.is_run_background:
             self._subprocess.wait()
-            
+            #if self.workdirpath is not None:
+            #    os.chdir(wd)
+                
             if self._subprocess.returncode == 0:
                 attrsman.status.set('success')
                 return True

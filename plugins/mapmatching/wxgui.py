@@ -288,7 +288,7 @@ class WxGui(    ModuleGui):
         and reset widgets. For exampe enable/disable widgets
         dependent on the availability of data. 
         """
-        print 'MapmatchingWxGui.refresh_widgets'
+        #print 'MapmatchingWxGui.refresh_widgets'
         scenario = self.get_scenario()
         is_refresh = False
         if self._scenario != scenario:
@@ -306,7 +306,7 @@ class WxGui(    ModuleGui):
             
         if is_refresh | self._is_needs_refresh:
             self._is_needs_refresh = False
-            print '  is_refresh',is_refresh,self._is_needs_refresh
+            #print '  is_refresh',is_refresh,self._is_needs_refresh
             neteditor = self.get_neteditor()
             #canvas = self.get_canvas()
             drawing = self.get_drawing()#canvas.get_drawing()
@@ -362,9 +362,12 @@ class WxGui(    ModuleGui):
             #info=self.on_import_ecc.__doc__.strip(),
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             )
-            
+        menubar.append_item( 'plugins/mapmatching/import/Strava...',
+            self.on_import_strava, 
+            #info=self.on_import_ecc.__doc__.strip(),
+            bitmap = self.get_agileicon("Document_Import_24px.png"),
+            )
         
-            
         menubar.append_item( 'plugins/mapmatching/import/GPX file...',
             self.on_import_gpx, 
             #info=self.on_import_ecc.__doc__.strip(),
@@ -1456,7 +1459,32 @@ class WxGui(    ModuleGui):
             self._mainframe.browse_obj(self._mapmatching.trips)
             self._is_needs_refresh = True
             self.refresh_widgets()
+            
+    def on_import_strava(self, event=None):
+        """
+        Import and filter data from a Bella Mossa data. 
+        """
+        p = mapmatching.StravaImporter(self._mapmatching, logger = self._mainframe.get_logger())
+        dlg = ProcessDialog(self._mainframe, p, immediate_apply=True)
+                         
+        dlg.CenterOnScreen()
     
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            #print ">>>>>>>>>Unsuccessful\n"
+            dlg.Destroy()
+            
+        if dlg.get_status() == 'success':
+            #print ">>>>>>>>>successful\n"
+            # apply current widget values to scenario instance
+            dlg.apply()
+            dlg.Destroy()
+            self._mainframe.browse_obj(self._mapmatching.trips)
+            self._is_needs_refresh = True
+            self.refresh_widgets()    
     def on_import_gtfs(self, event=None):
         """
         Import and filter data from GTFS shape database. 

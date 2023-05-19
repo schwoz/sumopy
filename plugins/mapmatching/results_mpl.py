@@ -23,25 +23,25 @@ except:
     is_scipy = False
 
 def is_sublist(l, s):
-	sub_set = False
-	if s == []:
-		sub_set = True
-	elif s == l:
-		sub_set = True
-	elif len(s) > len(l):
-		sub_set = False
+    sub_set = False
+    if s == []:
+        sub_set = True
+    elif s == l:
+        sub_set = True
+    elif len(s) > len(l):
+        sub_set = False
 
-	else:
-		for i in range(len(l)):
-			if l[i] == s[0]:
-				n = 1
-				while (n < len(s)) and (l[i+n] == s[n]):
-					n += 1
-				
-				if n == len(s):
-					sub_set = True
+    else:
+        for i in range(len(l)):
+            if l[i] == s[0]:
+                n = 1
+                while (n < len(s)) and (l[i+n] == s[n]):
+                    n += 1
+                
+                if n == len(s):
+                    sub_set = True
 
-	return sub_set
+    return sub_set
 
 from numpy.linalg import inv
 def kf_update(X, P, Y, H, R):
@@ -1836,7 +1836,9 @@ class AlternativeRoutesPlotter(PlotoptionsMixin, Process):
             plt.close(fig) 
         
 
-                                               
+
+
+
 class RouteresultPlotter(PlotoptionsMixin, Process):
     def __init__(self, results, name= 'Plot route results with Matplotlib', 
                     info = "Creates plots of different route results using matplotlib",  
@@ -2029,7 +2031,14 @@ class RouteresultPlotter(PlotoptionsMixin, Process):
                                         name = 'Show title', 
                                         info = 'Show title of diagrams.',
                                         ))
-                                        
+        
+        self.title = attrsman.add(cm.AttrConf(  'title', kwargs.get('title', ''),
+                                        groupnames = ['options'], 
+                                        name = 'Title', 
+                                        info = 'Title text, if blank then default values are used. Only in combination with show title option.',
+                                        ))
+
+                                                                        
         self.size_titlefont = attrsman.add(cm.AttrConf(  'size_titlefont', kwargs.get('size_titlefont',32),
                                         groupnames = ['options'], 
                                         name = 'Title fontsize', 
@@ -2473,20 +2482,33 @@ class RouteresultPlotter(PlotoptionsMixin, Process):
         for i, id_trip in zip(range(len(ids_trip)),ids_trip):
             t = time.localtime(trips.timestamps[id_trip])
             hour_departure[i] = t.tm_hour + t.tm_min/60.0 + t.tm_sec/3600.0
-        print hour_departure[:1000]
+        #print hour_departure[:1000]
         
         
         ax = fig.add_subplot(111)
         x_min = min(hour_departure)
         x_max = max(hour_departure)
-        bins = np.linspace(x_min,x_max,self.n_bins)
-        bincenters = plt.hist(hour_departure, bins = bins, color = self.color_matched,
-                                            label = 'Departure time (hour) distribution')
+        if self.n_bins <0:
+                bins = np.arange(x_min, x_max + 1, 1)
+                
+        else:
+                n_bins = self.n_bins
+                bins = np.linspace(x_min, x_max, n_bins)
+                
+        #print '  bins',bins
+        bincenters = plt.hist(  hour_departure, bins = bins, color = self.color_line, 
+                                density = True,
+                                histtype = 'stepfilled',
+                                label = 'Departure time (hour) distribution')
         
         ax.legend(loc='best',shadow=True, fontsize=self.size_labelfont)
         ax.grid(self.is_grid)
         if self.is_title:
-            ax.set_title('Departure time distribution of matched route', fontsize=self.size_titlefont)
+            if self.title =="":
+                    title = 'Departure time distribution of GPS traces'
+            else:
+                    title = self.title
+            ax.set_title(title, fontsize=self.size_titlefont)
         ax.set_xlabel('Departure time [h]', fontsize=self.size_labelfont)
         ax.set_ylabel('Probability distribution', fontsize=self.size_labelfont)
         ax.tick_params(axis='x', labelsize=int(0.8*self.size_labelfont))

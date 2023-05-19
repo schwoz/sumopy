@@ -6,9 +6,9 @@ This includes different demand generation models as well as a large range of mod
 bicycle and Personal Rapid Transit (PRT). SUMOPy consists of a GUI interface, network editor as well as a simple to use scripting language which facilitates the use of SUMO.
 """
 __appname__ = "SUMOPy"
-__version__ = "2.4"
+__version__ = "2.5"
 __licence__ = """SUMOPy is licensed under the GPL."""
-__copyright__ = "(c) 2012-2019 University of Bologna - DICAM"
+__copyright__ = "(c) 2012-2022 University of Bologna - DICAM"
 __author__ = "Joerg Schweizer"
 __usage__="""USAGE:
 from command line:
@@ -27,7 +27,17 @@ from command line:
 use for debugging:
     python sumopy_gui.py --debug > debug.txt 2>&1
 """
-
+print '                   _                         '
+print '       ____________|______|||___________________      '
+print '      /      _     |              / \  _ _ _ _ _ \     '       
+print '     /       |   / | \     v     / _ \ _|_|_|_|_ /     '       
+print '     \   __o-o__/  |  \  \ | /  / / \ \     ____/      '       
+print '      \        / \|o|/ \  \|/  / / o/\ \   |   _|__/_  '      
+print '       \      /  \|o|/  \  |  / / /|  \ \  |  | |      '      
+print '   | | | | | /   \|0|/   \ v /  \_/ \_/  \_|    |      '      
+print '   | | | | |/_____________\_/____________/ ____/       '
+print '                                         |/             '
+print ''
 print __appname__+' version '+__version__+'\n'+__copyright__
 
 ###############################################################################
@@ -121,7 +131,7 @@ class MyApp(wx.App):
         info.SetVersion(__version__)
         info.SetDescription(__doc__)
         info.SetCopyright(__copyright__)
-        info.SetWebSite('https://sumo.dlr.de/docs/Contributed/SUMOPy.html')
+        info.SetWebSite('http://sumo.dlr.de/wiki/Contributed/SUMOPy')
         #info.SetWebSite('http://distart041.ing.unibo.it/~mait/projects/sim/users_guide/users_guide.html')
         info.SetLicence(__licence__)
         info.AddDeveloper(__author__)

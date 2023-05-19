@@ -1,4 +1,6 @@
  
+
+
 import time, os, types, re
 import numpy as np
 from xml.sax import saxutils, parse, handler
@@ -256,6 +258,9 @@ def get_fieldinfo(field):
         
     
 class ShapefileImporter(Process):
+    # TODO: 
+    # probe should be a list
+    # boundaries are not implemented
     def __init__(self,  ident = 'shapefileimporter', parent = None,  
                         name = 'Shape file importer',
                         filepath = '',
@@ -301,7 +306,7 @@ class ShapefileImporter(Process):
             config = attrsman_parent.get_config(attrname)
             fieldname = 'fieldname_'+attrname
             setattr(self,fieldname, 
-                        attrsman.add(cm.AttrConf( fieldname, shapeattr_default,
+                        attrsman.add(cm.AttrConf( fieldname, kwargs.get(fieldname,shapeattr_default),
                                                         groupnames = ['options','field names'], 
                                                         perm='rw', 
                                                         attrname_orig = attrname,
@@ -1274,5 +1279,65 @@ def facilities_to_shapefile(facilities, filepath, dataname= 'facilitydata',
     shapedata.export_shapefile()
     return True
    
+ 
+def zones_to_shapefile(zones, filepath, dataname= 'zonedata', 
+                        is_access = True, parent = None, log = None):
+    """
+    Export network edges to shapefile.
+    """
+    net = zones.parent.facilities.get_net()
+    shapedata = Shapedata(parent,dataname, name = 'Facilities shape data', 
+                                    filepath = filepath, 
+                                    shapetype = SHAPETYPES['PolyLine'],
+                                    projparams_shape = net.get_projparams(),
+                                    offset = net.get_offset(), log = log )
     
+    #attrname, ftype, flen, fdigit = field
+    attrlist = [\
+    ('id','id','ID_ZON','N',32,0),
+    # ~ ('names_extended','id','ID_NAM','N',32,0),
+    ('ids_landusetype','id','ID_LANTYPE','N',12,5),
+    ('areas','id','AREAS','N',12,5),
+    
+    #('n_edges','id','N_EDGES','N',12,5),
+    #('share_roads_surface','id','SH_ROAD_SURF','N',12,5),
+    #('share_exclusive_cyclingroads','id','SHARE_EXCL_BIKE','N',12,5),
+    #('av_priority_roads','id','AV_ROAD_PRI','N',12,5),
+    #('density_intersection','id','DENS_INTER','N',12,5),
+    #('density_trafficlight','id','DENS_TL','N',12,5),
+    #('share_facilities','id','SHARE_FAC','N',12,5),
+    #('share_residential','id','SHARE_RES','N',12,5),
+    #('share_commercial','id','SHARE_COM','N',12,5),
+    #('share_industrial','id','SHARE_IND','N',12,5),
+    #('share_leisure','id','SHARE_LEI','N',12,5),
+    #('entropies','id','ENTROPY','N',12,5),
+    ]
+    
+
+    
+    print 'zones_to_shapefile',filepath
+    
+    for attr in attrlist:
+        shapedata.add_field(attr[2:])
+    
+   
+    ids_zon = zones.get_ids()
+    
+    ids_shape = shapedata.add_rows(len(ids_zon))
+    #print '  shapedata.ID_ARC',shapedata.ID_ARC,'dir',dir(shapedata.ID_ARC)
+    shapedata.ID_ZON[ids_shape] = ids_zon
+    shapedata.shapes[ids_shape] = zones.shapes[ids_zon]
+    # ~ shapedata.ID_ZON[ids_shape] = ids_zon   
+    for netattrname, gettype, shapeattrname,x1,x2,x3 in attrlist:
+        if netattrname not in ('id',):
+            getattr(shapedata,shapeattrname)[ids_shape] = getattr(zones,netattrname)[ids_zon]
+        
+        
+
+
+    # ~ shapedata.adjust_fieldlength() 
+    shapedata.export_shapefile()
+    return True  
+    
+
     

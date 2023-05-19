@@ -37,10 +37,7 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
                             
         self._init_attributes()
         
-    #def set_version(self, verion = 0.1):
-    #    self._version = 0.1
-        
-        
+
         
     def _init_attributes(self):
         #attrsman = self # = self.get_attrsman()
@@ -49,6 +46,9 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
         
         
         self.add(cm.ObjConf( PtLinks('ptlinks',self) ) )
+        
+        
+                                                
         self.add_col(am.ArrayConf( 'linenames', default = '',
                                     dtype = 'object',
                                     perm = 'rw', 
@@ -90,11 +90,36 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
                                             info = 'Dwell time in a stop while passengers are boarding/alighting.', 
                                             xmltag = 'duration',
                                             ))
+        
+        
+        
+        
+        self.add_col(am.ArrayConf( 'are_parking', False,
+                                            groupnames = ['options'], 
+                                            perm='rw', 
+                                            name = 'Parking position',
+                                            untit = 's',
+                                            info = 'If True, public transport vehicles go in parking position at stops.', 
+                                            ))
                                 
         self.add_col(am.IdlistsArrayConf( 'ids_stops', net.ptstops,
                                             groupnames = ['parameters'], 
                                             name = 'PT stop IDs', 
                                             info = 'Sequence of IDs of stops or stations of a public transort line.',   
+                                            ))
+        
+        self.add_col(am.ListArrayConf( 'times_stops',
+                                            groupnames = ['parameters'], 
+                                            name = 'Stop times', 
+                                            info = 'Sequence of absolute time instances until a bus waits at each stop, if bus arrived before that time. The number of times must corrispond to the number of stops.',   
+                                            ))
+                                                                                
+        self.add_col(am.ListArrayConf( 'times_dwell_stops',
+                                            groupnames = ['parameters'], 
+                                            name = 'Stop dwell times', 
+                                            info = """Sequence of dwell time a bus waits at each stop, independent of the arrival time. 
+                                            This is an alternative to the times_stops information and is activated if the scalar dwell time is set to -1. 
+                                            The number of dwell times must corrispond to the number of stops.""",   
                                             ))
                                             
         self.add_col(am.IdlistsArrayConf( 'ids_edges', net.edges,
@@ -127,6 +152,8 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
             self.periods.set_xmltag('period')
             self.times_end.set_xmltag('end')
             self.times_begin.set_xmltag('begin')
+            
+        self.set_version(0.2)
     
     def check_initial_stops(self):
         """
@@ -198,15 +225,39 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
         return self.ptlinks.get_value()
         
     def make (self, **kwargs):
-        return self.add_row(    linenames = kwargs.get('linename',None), 
+        print 80*'#'
+        print 'PtLines.make'
+        print 'times_dwell_stop',kwargs.get('times_dwell_stop',None)
+        
+        
+        times_dwell_stop = kwargs.get('times_dwell_stop',None)
+        
+        if times_dwell_stop is not None:
+            # this will ignore common dwell time  for all stops
+            time_dwell = -1
+        else:
+            # use given or default dwell time for all stops
+            time_dwell = kwargs.get('time_dwell',None)
+        
+        if not kwargs.has_key('time_end'):
+            # no end time => this is a one off servics
+            kwargs['time_end'] = kwargs['time_begin']+24*3600# just add a day, does not matter 
+            kwargs['period'] = 99999999 # infinite period to ensyre one occurency
+            
+        id_ptline = self.add_row(  linenames = kwargs.get('linename',None), 
                                     times_begin = kwargs.get('time_begin',None),
                                     times_end = kwargs.get('time_end',None),
                                     periods = kwargs.get('period',None),
-                                    times_dwell= kwargs.get('time_dwell',None),
-                                    ids_stops= kwargs.get('ids_stop',None),
-                                    ids_edges= kwargs.get('ids_edge',None),
+                                    times_dwell= time_dwell,
+                                    are_parking = kwargs.get('is_parking',None),
                                     ids_vtype= kwargs.get('id_vtype',None),
                                     )
+                                    
+        self.ids_stops[id_ptline]= kwargs.get('ids_stop',None)
+        self.ids_edges[id_ptline]= kwargs.get('ids_edge',None)                           
+        self.times_stops[id_ptline] = kwargs.get('times_stop',None)
+        self.times_dwell_stops[id_ptline] = times_dwell_stop
+        return id_ptline
         
              
     def on_del_row(self, id_row=None):
@@ -228,13 +279,14 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
         else:
             return 0.0
         
-    def guess_routes(self, is_keep_existing = False):
+    def guess_routes(self, is_keep_existing = False, ids_line = None ):
         """
         Guess sequence of edges between stops if not previously specified 
         using shortest path routing.
         """
         #print 'guess_routes'
-        ids_line = self.get_ids()
+        if ids_line is None:
+            ids_line = self.get_ids()
         vtypes = self.ids_vtype.get_linktab() 
         ptstops = self.get_ptstops()
         net = self.get_net()
@@ -245,16 +297,19 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
         ids_laneedge = net.lanes.ids_edge
         ids_stoplane = ptstops.ids_lane
         
-        # make forward star for transport net
-        fstar = net.edges.get_fstar()
+
         
         # get edge travel times for each PT mode
         get_times = net.edges.get_times
         map_mode_to_times = {}   
+        map_mode_to_fstar = {}   
         ids_mode =  vtypes.ids_mode[self.ids_vtype[ids_line]]    
         for id_mode in set(ids_mode):
             map_mode_to_times[id_mode] = get_times( id_mode = id_mode,
                                                     is_check_lanes = True)
+            map_mode_to_fstar[id_mode] = net.edges.get_fstar(   is_return_arrays = True,
+                                                                is_ignor_connections = False, 
+                                                                id_mode = id_mode)
         
         
         # complete routes between all pairs of stops of all lines
@@ -273,11 +328,11 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
                 duration = 0
                 for i in xrange(1,len(ids_stop)):
                      #print '    route',ids_stopedge[i-1],ids_stopedge[i]
-                     time, ids_edges_current  = get_mincostroute_edge2edge(\
-                                                ids_stopedge[i-1], 
-                                                ids_stopedge[i], 
-                                                weights = map_mode_to_times[id_mode], 
-                                                fstar = fstar)
+                     time, ids_edges_current  = get_mincostroute_edge2edge( ids_stopedge[i-1], 
+                                                                            ids_stopedge[i], 
+                                                                            weights = map_mode_to_times[id_mode], 
+                                                                            fstar = map_mode_to_fstar[id_mode] 
+                                                                            )
                                 
                      #print '    ids_edges_current',ids_edges_current
                      if len(ids_edges_current)==0:
@@ -383,15 +438,43 @@ class PtLines(DemandobjMixin, am.ArrayObjman):
         # write stops
         
         ids_stop = self.ids_stops[id_line]
-        
+        is_parking = self.are_parking[id_line]
         if len(ids_stop)>0:
             stopnames = self.ids_stops.get_linktab().stopnames[ids_stop]
-            time_dwell = self.times_dwell[id_line]
-            for stopname in stopnames:
-                fd.write(xm.start('stop',indent+2))
-                fd.write(xm.num('busStop',stopname))
-                fd.write(xm.num('duration',time_dwell))
-                fd.write(xm.stopit())
+    
+            if self.times_stops[id_line] in [None, []]:
+                # use dwell times to define wait times at stops
+                
+                # is there a common dwell time for all stops?
+                time_dwell = self.times_dwell[id_line]
+                if time_dwell == -1: 
+                    # individual dwell times for each stop
+                    times_dwell_stop = self.times_dwell_stops[id_line]
+                ind_stop = 0
+                for stopname in stopnames:
+                    fd.write(xm.start('stop',indent+2))
+                    fd.write(xm.num('busStop',stopname))
+                    if time_dwell == -1:
+                        fd.write(xm.num('duration',times_dwell_stop[ind_stop]))
+                    else:
+                        fd.write(xm.num('duration',time_dwell))
+                    if is_parking:
+                        fd.write(xm.num('parking', "True"))
+                    fd.write(xm.stopit())
+                    ind_stop += 1
+                    
+            else:
+                # use absolute departure times to define wait times at stops
+                for stopname, time_stop in zip(stopnames, self.times_stops[id_line]):
+                    fd.write(xm.start('stop',indent+2))
+                    fd.write(xm.num('busStop',stopname))
+                    fd.write(xm.num('until',time_stop))
+                    if is_parking:
+                        fd.write(xm.num('parking', "True"))
+                    fd.write(xm.stopit())
+        
+        
+        
         fd.write(xm.end('flow',indent))    
     
     def write_run_xml(self, fd, id_run, time_begin, indent = 0):
@@ -660,6 +743,7 @@ class PtLinks(am.ArrayObjman):
                                     }
                                     
         ## first create links between stops of each line
+        ids_ptlines_failed = []
         for id_line,  id_vtype, ids_stop, ids_edge, linename in zip (\
                                                     ids_line,
                                                     ptlines.ids_vtype[ids_line],
@@ -667,28 +751,64 @@ class PtLinks(am.ArrayObjman):
                                                     ptlines.ids_edges[ids_line],
                                                     ptlines.linenames[ids_line],
                                                     ):
+            n_edge = len(ids_edge)
+            n_stop = len(ids_stop)
             print 79*'-'                                            
-            print 'Build links of line',linename,'id_line',id_line
+            print 'Build links of line',linename,'id_line',id_line,'n_edge',n_edge,'n_stop',n_stop
             if (len(ids_edge)>1) & (len(ids_stop)>2):
+                
+                
+                
+                # check if all stop edges are on route and in the correct order:
                 ind_edge = 0
-                length = edgelengths[ids_edge[0]] - stoppositions[ids_stop[0]]
                 
-                # TODO: limit speed by vtype
-                duration = length/edgespeeds[ids_edge[0]]
-                #length_laststop = length_current
-                
-                # check if all stop edges are on route:
-                if set(ids_edge).issuperset(ids_laneedge[ids_stoplane[ids_stop[1:]]]):
-                
+                id_stopedge_next = ids_laneedge[ids_stoplane[ids_stop[1]]]
+                for ind_stop in xrange(1,n_stop):
+                    id_fromstop = ids_stop[ind_stop-1]
+                    id_tostop = ids_stop[ind_stop]
+                    if id_fromstop!=id_tostop:
+                            is_cont = True
+                            is_mismatch = False
+                            while is_cont:
+                                if id_stopedge_next == ids_edge[ind_edge]:
+                                    is_cont = False
+                                    
+                                elif ind_edge == n_edge-1:
+                                    is_mismatch = True
+                                    is_cont = False
+                                else:
+                                    ind_edge += 1
+                                
+                                #    print '      ind_edge,id_stopedge_next,ids_edge[ind_edge]',ind_edge,id_stopedge_next,ids_edge[ind_edge],len(ids_edge)
+                        
+                    
+                    #is_mismatch =   (ind_edge == (n_edge-1)) & (ind_stop != (n_stop-1))
+                    print '    ind_stop',ind_stop,'ind_edge',ind_edge,is_mismatch
+                    if is_mismatch:
+                        break
+                        
+                    if  id_tostop !=  ids_stop[-1]:
+                        id_stopedge_next = ids_laneedge[ids_stoplane[ids_stop[ind_stop+1]]]
+                             
+                    
+                #if set(ids_edge).issuperset(ids_laneedge[ids_stoplane[ids_stop[1:]]]):
+                if not is_mismatch:
+                    
+                    length = edgelengths[ids_edge[0]] - stoppositions[ids_stop[0]]
+                    
+                    # TODO: limit speed by vtype
+                    duration = length/edgespeeds[ids_edge[0]]
+                    #length_laststop = length_current
                     id_stopedge_next = ids_laneedge[ids_stoplane[ids_stop[1]]]
 
                     ids_link = [] 
+                    ind_edge = 0
                     for ind_stop in xrange(1,len(ids_stop)):
                         id_fromstop = ids_stop[ind_stop-1]
                         id_tostop = ids_stop[ind_stop]
                         
-                        if id_fromstop == id_stop_debug:
-                            print '    id_fromstop,id_tostop',id_fromstop,id_tostop
+                        #if id_fromstop == id_stop_debug:
+                        print '    ind_stop',ind_stop,'id_fromstop,id_tostop',id_fromstop,id_tostop,'ind_edge',ind_edge
                         
                         # this prevents error in case two successive stops have
                         # (by editing error) the same ID 
@@ -696,8 +816,8 @@ class PtLinks(am.ArrayObjman):
                         
                             # compute length and time between  fromstop and tostop
                             while id_stopedge_next != ids_edge[ind_edge]:
-                                if id_fromstop == id_stop_debug:
-                                    print '      ind_edge,id_stopedge_next,ids_edge[ind_edge]',ind_edge,id_stopedge_next,ids_edge[ind_edge],len(ids_edge)
+                                #if id_fromstop == id_stop_debug:
+                                print '      ind_edge',ind_edge,',id_stopedge_next,ids_edge[ind_edge]',id_stopedge_next,ids_edge[ind_edge]
                                 ind_edge += 1
                                 length_edge  =  edgelengths[ids_edge[ind_edge]]
                                 length += length_edge
@@ -744,6 +864,7 @@ class PtLinks(am.ArrayObjman):
                 else:
                    print 'WARNING in line',linename,'id_line',id_line
                    print '         stop edges not on route, line will not build.'
+                   ids_ptlines_failed.append(id_line)
                     
         ## complete stoplink database
         
@@ -875,26 +996,36 @@ class PtLinks(am.ArrayObjman):
             ids_walk = stoplinks[id_stop]['ids_walk']
             for id_walk, id_tostop in zip(ids_walk, self.ids_tostop[ids_walk]):
                 self.ids_links_forward[id_walk]=[stoplinks[id_tostop]['id_enter']]
-        
-        ## debugging
-        print 79*'='        
-        ids_link = self.get_ids() 
-        for id_link, linktype, id_fromstop,id_tostop,id_line,duration,ids_link_forward in zip(\
-                        ids_link, self.types[ids_link], self.ids_fromstop[ids_link],self.ids_tostop[ids_link],self.ids_line[ids_link],self.durations[ids_link],self.ids_links_forward[ids_link]):
-            if id_fromstop == id_stop_debug:
-                 print '  FROM',id_stop_debug,'TO',id_tostop
-                 self.print_link(id_link, ident = 4)
-                 print '      ids_link_forward=',ids_link_forward
-        
-        print 79*'='
-        for id_link, linktype, id_fromstop,id_tostop,id_line,duration,ids_link_forward in zip(\
-                        ids_link, self.types[ids_link], self.ids_fromstop[ids_link],self.ids_tostop[ids_link],self.ids_line[ids_link],self.durations[ids_link],self.ids_links_forward[ids_link]):
-              
-            if id_tostop == id_stop_debug:
-                 print '  FROM',id_fromstop,'TO',id_stop_debug
-                 self.print_link(id_link, ident = 4)
-                 print '      ids_link_forward=',ids_link_forward
-                    
+        if 0:
+            ## debugging
+            print 79*'='        
+            ids_link = self.get_ids() 
+            for id_link, linktype, id_fromstop,id_tostop,id_line,duration,ids_link_forward in zip(\
+                            ids_link, self.types[ids_link], self.ids_fromstop[ids_link],self.ids_tostop[ids_link],self.ids_line[ids_link],self.durations[ids_link],self.ids_links_forward[ids_link]):
+                if id_fromstop == id_stop_debug:
+                     print '  FROM',id_stop_debug,'TO',id_tostop
+                     self.print_link(id_link, ident = 4)
+                     print '      ids_link_forward=',ids_link_forward
+            
+            print 79*'='
+            for id_link, linktype, id_fromstop,id_tostop,id_line,duration,ids_link_forward in zip(\
+                            ids_link, self.types[ids_link], self.ids_fromstop[ids_link],self.ids_tostop[ids_link],self.ids_line[ids_link],self.durations[ids_link],self.ids_links_forward[ids_link]):
+                  
+                if id_tostop == id_stop_debug:
+                     print '  FROM',id_fromstop,'TO',id_stop_debug
+                     self.print_link(id_link, ident = 4)
+                     print '      ids_link_forward=',ids_link_forward
+            
+        # debug
+        print 'Number of failed Ptlines', len(ids_ptlines_failed),'of',len(ptlines)
+        for id_line,linename, period in zip (\
+                                                    ids_ptlines_failed,
+                                                    ptlines.linenames[ids_ptlines_failed],
+                                                    ptlines.periods[ids_ptlines_failed],
+                                                    ):
+            print '    Failed to build line',linename,'id_line',id_line,'period',period,'s'
+    
+        return ids_ptlines_failed
                          
     def get_map_stop_to_ptlinks(self, is_fromstop = True, is_tostop = False, linktype = 2):
         """
@@ -1174,18 +1305,31 @@ class PtLinefilter(Process):
         
         attrsman = self.set_attrsman(cm.Attrsman(self))
         
-        self.period_max = attrsman.add(cm.AttrConf( 'period_max',kwargs.get('period_max',1200),
+        self.period_max = attrsman.add(cm.AttrConf( 'period_max',kwargs.get('period_max',-1),
                             groupnames = ['options'], 
                             perm='rw', 
                             name = 'Max. duration of period', 
-                            info = """Max. duration of period""",
+                            info = """Max. duration of period. When -1 this filter is disabeled.""",
                             ))
                             
-        self.n_stops_min = attrsman.add(cm.AttrConf( 'n_stops_min',kwargs.get('n_stops_min',5),
+        self.n_stops_min = attrsman.add(cm.AttrConf( 'n_stops_min',kwargs.get('n_stops_min',-1),
                             groupnames = ['options'], 
                             perm='rw', 
                             name = 'Min. number of stops', 
-                            info = """Min. number of stops.""",
+                            info = """Min. number of stops.  When -1 this filter is disabeled.""",
+                            ))
+        
+        self.linenameprefix = attrsman.add(cm.AttrConf( 'linenameprefix',kwargs.get('linenameprefix',''),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            name = 'Line name', 
+                            info = """Filter stops with this line name. When empty, this filter is disabeled. If a prefix seperator is defined then only the line name before the first separator is considered.""",
+                            ))
+        self.sep_prefix = attrsman.add(cm.AttrConf( 'sep_prefix',kwargs.get('sep_prefix',''),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            name = 'Prefix separator', 
+                            info = """If a prefix seperator is non empty, then only the line name before the first separator is considered.""",
                             ))
                             
     def do(self):
@@ -1200,15 +1344,27 @@ class PtLinefilter(Process):
         ids_line = ptlines.get_ids()
         
         ids_remove = []
-        for id_line, ids_stop ,period  in zip(  ids_line, 
-                                                    ptlines.ids_stops[ids_line],
-                                                    ptlines.periods[ids_line]
-                                                    ):
-            if len(ids_stop) < self.n_stops_min:
-                ids_remove.append(id_line)
+        for id_line, linename, ids_stop ,period  in zip(  ids_line, 
+                                                        ptlines.linenames[ids_line],
+                                                        ptlines.ids_stops[ids_line],
+                                                        ptlines.periods[ids_line]
+                                                        ):
+            if self.n_stops_min > -1:
+                if len(ids_stop) < self.n_stops_min:
+                    ids_remove.append(id_line)
                 
-            elif  period > self.period_max:
-                ids_remove.append(id_line)
+            elif  self.period_max > -1:
+                if period > self.period_max:
+                    ids_remove.append(id_line)
+                
+            elif self.linenameprefix != '':
+                if self.sep_prefix != '':
+                    lineprefix = linename.split(self.sep_prefix)[0]
+                else:
+                    lineprefix = linename
+                if lineprefix != self.linenameprefix:
+                    ids_remove.append(id_line)
+                
                                                         
          
         
@@ -1298,13 +1454,15 @@ class PtNetbuilder(Process):
         print 'VehicleProvider.do'
         # links
         
-        virtualpop = self.parent
+        #virtualpop = self.parent
         logger = self.get_logger()
         logger.w('Build PT network...')
         
-        self.parent.build( dist_walk_los = self.dist_walk_los, speed_walk_los = self.speed_walk_los, 
-                            duration_transfer = self.duration_transfer, duration_alight = self.duration_alight,
-                            duration_exit = self.duration_exit, duration_enter = self.duration_enter)
+        ids_ptlines_failed = self.parent.build( dist_walk_los = self.dist_walk_los, speed_walk_los = self.speed_walk_los, 
+                                duration_transfer = self.duration_transfer, duration_alight = self.duration_alight,
+                                duration_exit = self.duration_exit, duration_enter = self.duration_enter)
+        
+        
         return True
                     
 class LineReader(handler.ContentHandler):

@@ -88,12 +88,14 @@ GUISHAPES = [\
     "evehicle",
     "ship", 
   ] 
+
+CARFOLLOWMODELS = ['Krauss','KraussOrig1','PWagner2009','BKerner','IDM','IDMM','KraussPS','KraussAB','SmartSK','Wiedemann','W99','Daniel1','ACC','CACC','Rail']
                     
 ALIGNMMENTS_LAT = ['center','left', 'right', 'compact', 'nice', 'arbitrary']
 
 class Electricalprofiles(am.ArrayObjman):
     def __init__(self,ident, parent, **kwargs):
-        print 'Electricalprofiles.__init__'
+        #print 'Electricalprofiles.__init__'
         self._init_objman(  ident = ident, 
                             parent = parent, 
                             name = 'Electrical profiles', 
@@ -106,7 +108,7 @@ class Electricalprofiles(am.ArrayObjman):
        
       
     def _init_attributes(self):
-        print 'Electricalprofiles._init_attributes'
+        #print 'Electricalprofiles._init_attributes'
         self.add_col(SumoIdsConf('profilename', name ='Electric profile', perm = 'rw'))
         self.add_col(am.ArrayConf(  'capacities_battery', 0.8,
                                         groupnames = ['parameters','key'], 
@@ -169,13 +171,13 @@ class Electricalprofiles(am.ArrayObjman):
                         
 class VehicleTypes(am.ArrayObjman):
     def __init__(self, parent, net, is_add_default=True, **kwargs):
-        print 'VehicleTypes.__init__ is_add_default',is_add_default
+        #print 'VehicleTypes.__init__ is_add_default',is_add_default
         self._init_objman(  ident='vtypes', 
                             parent=parent, 
                             name = 'Vehicle Types', 
                             info = 'Table of all available vehicle types, each with specific physical characteristics. Each vehicle can be used multiple times in the simulation', 
                             xmltag = ('vTypes','vType','ids_sumo'),
-                            version = 0.3, 
+                            version = 0.4, 
                             **kwargs)
         self._init_attributes()
         
@@ -185,7 +187,7 @@ class VehicleTypes(am.ArrayObjman):
         self.set_version(0.3)
         
     def _init_attributes(self):
-        print 'VehicleTypes._init_attributes',len(self),self.get_ident_abs()
+        #print 'VehicleTypes._init_attributes',len(self),self.get_ident_abs()
         net = self.parent.get_net()
         demand = self.parent
         
@@ -245,7 +247,7 @@ class VehicleTypes(am.ArrayObjman):
                                                 #cml = optionprefix+'--pedestrian.striping.dawdling',
                                                 ))
 
-        self.add(cm.AttrConf( 'jamtime_pedestrian_striping', 10,
+        self.add(cm.AttrConf( 'jamtime_pedestrian_striping', 60,
                                                 groupnames = ['parameters','pedestrian'],
                                                 name = 'Ped. jamtime',
                                                 unit = 's',
@@ -255,7 +257,7 @@ class VehicleTypes(am.ArrayObjman):
                                                 ))
                                                  
         
-        self.add(cm.AttrConf( 'jamtime_pedestrian_crossing_striping', 10,
+        self.add(cm.AttrConf( 'jamtime_pedestrian_crossing_striping', 200,
                                                 groupnames = ['parameters','pedestrian'],
                                                 name = 'Ped. jamtime at crossing',
                                                 unit = 's',
@@ -265,7 +267,14 @@ class VehicleTypes(am.ArrayObjman):
                                                 ))
                                                 
         
-        
+        self.add(cm.AttrConf( 'tolerancy_boarding', 0.0,
+                                                groupnames = ['parameters','pedestrian'],
+                                                name = 'Boarding tolerancy',
+                                                unit = 'm',
+                                                perm = 'rw',
+                                                info = "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops",
+                                                ))
+                                                
         self.add(cm.ObjConf(Electricalprofiles('eprofiles',self))   ) 
         
         # column parameters
@@ -468,11 +477,16 @@ class VehicleTypes(am.ArrayObjman):
         eprofiles = self.eprofiles.get_value()
         self.add_col(am.IdsArrayConf( 'ids_eprofile', eprofiles, 
                                         groupnames = ['parameters','energy'],
-                                        choices = eprofiles.ids_sumo.get_indexmap(), 
+                                        #choices = eprofiles.ids_sumo.get_indexmap(), 
                                         name = 'Electrical profile', 
                                         info = 'Defines battery, energy recovery and charging parameters.',
                                         ))                                
-                                                                        
+        
+        # for temporary upgrade
+        if  hasattr(self.ids_eprofile,'choices'):
+            del self.ids_eprofile.choices
+
+        self.ids_eprofile.set_perm('rw')                                                        
                                                                                                                                                                               
         self.add_col(am.ArrayConf(  'taus', 1.0,
                                         groupnames = ['parameters','driver'], 
@@ -525,7 +539,13 @@ class VehicleTypes(am.ArrayObjman):
                                         xmltag = 'reroute',
                                         ))
         
-        
+        self.add_col(am.ArrayConf(  'have_taxi_device',  False,
+                                        groupnames = ['parameters'], 
+                                        name = 'has taxi device',
+                                        info = "Vehicles with taxi devices can act as taxis and pick up and drop people from the virtual population who are using the taxi strategy.",
+                                        #xmltag = '',# tag set explicitely
+                                        ))
+                                        
         emissionclasses_xml = {}
         for key in EMISSIONCLASSES.keys():
             emissionclasses_xml[key]=key# yes, map onto itself, otherwise choice values are taken
@@ -670,7 +690,15 @@ class VehicleTypes(am.ArrayObjman):
                                         unit = 's',
                                         xmltag = 'lcTimeToImpatience',
                                         ))
-                                                                        
+        
+        self.add_col(am.ArrayConf(   'carfollowermodels', CARFOLLOWMODELS[0],# Kraus
+                                        groupnames = ['parameters','driver'], 
+                                        choices = CARFOLLOWMODELS,
+                                        name = 'Carfollower model',
+                                        info = "Carfollower model.",
+                                        xmltag = 'carFollowModel',
+                                        ))
+                                                                                                        
         if hasattr(self,'sublane_impatience'):
             self.delete('sublane_impatience')
             self.delete('sublane_time_to_impatience')
@@ -725,13 +753,43 @@ class VehicleTypes(am.ArrayObjman):
     def on_add_row(self, id_row=None):
         #print 'on_add_row',id_row,len(self),(id_row is None)|(len(self)==0)
         if (id_row is  None)|(len(self)==0):
-            
+            #print '  first'
             _id = self.add_row()
             #print '  add id=',_id
+        elif id_row is not None:
+            
+            row_last = self.get_row(id_row)
+            id_sumo =  row_last['ids_sumo']
+            id_data = id_sumo.split('_')
+            #print '  clone',id_data,len(id_data)
+            i=1
+            if len(id_data) == 1:
+                    row_last['ids_sumo'] = id_sumo+'_%03d'%i
+            else:       
+                    #print '    create new i',int(id_data[-1])
+                    try:
+                            i = int(id_data[-1])
+                            i += 1
+                            id_sumo = id_data[0]
+                            for s in id_data[1:-1]:
+                                  id_sumo += '_'+s
+                            #print '      new i:',i,id_sumo+'_%03d'%i
+                            row_last['ids_sumo'] = id_sumo+'_%03d'%i
+                    except:
+                            id_sumo = id_data[0]
+                            for s in id_data[1:]:
+                                  id_sumo += '_'+s
+                                    
+                            row_last['ids_sumo'] = id_sumo+'_%03d'%i
+                            
+            #print '  row_last',row_last
+            _id = self.add_row(**row_last)
+            #print '  _id',_id   
         else:
-            #print '  dublicate'
+            print '  clone last'
+            i = 1
             row_last = self.get_row(self.get_ids()[-1])
-            row_last['ids_sumo'] += '_NEW'# important for all indexed attrs!!
+            row_last['ids_sumo'] += '_%03d'%i# important for all indexed attrs!!
             #print '  row_last',row_last
             _id = self.add_row(**row_last)
             #print '  _id',_id
@@ -751,7 +809,7 @@ class VehicleTypes(am.ArrayObjman):
     
     
     def add_vtype(self, vtype, **kwargs):
-        print 'add_vtype',vtype,kwargs
+        #print 'add_vtype',vtype,kwargs
         if self.ids_sumo.has_index(vtype):
             # vtype already exist
             _id = self.ids_sumo.get_id_from_index(vtype)
@@ -823,21 +881,25 @@ class VehicleTypes(am.ArrayObjman):
                             coefficients_drag_roll = kwargs.get("coefficient_drag_roll",None),
                             efficiencies_propulsion = kwargs.get("efficiency_propulsion",None),
                             ids_eprofile = id_eprofile,
+                            have_taxi_device = kwargs.get("has_taxi_device",False),
+                            have_reroute_device = kwargs.get("has_reroute_device",False),
+                            carfollowermodel = kwargs.get("carfollowermodel",CARFOLLOWMODELS[0]),
                             )
                             
         return _id 
                                        
     def add_vtypes_default(self):
-        print 'add_vtypes_default'
+        #print 'add_vtypes_default'
         #self.del_rows(self.get_ids())
         self.add_vtype('pedestrian',  
                         accel = 1.5, 
                         decel = 2.0,
                         decel_apparent = 3.0,
                         decel_emergency  = 3.0,
+                        tau = 0.9,
                         sigma = 0.5, 
                         length = 0.25,
-                        width = 0.44,
+                        width = 0.35,
                         height = 1.719,
                         number_persons = 1,
                         capacity_persons = 1,
@@ -856,6 +918,7 @@ class VehicleTypes(am.ArrayObjman):
                         sublane_gap_min_lat = 0.5,
                         sublane_alignment_eager= 0.5,
                         sublane_pushyfactor= 0.5,
+                        carfollowermodel = CARFOLLOWMODELS[0],
                         )
                         
         self.add_vtype('passenger1',  
@@ -863,6 +926,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 3.0,
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.9,
                         sigma = 0.5, 
                         length = 4.3, 
                         height = 1.50,
@@ -877,11 +941,12 @@ class VehicleTypes(am.ArrayObjman):
                         shape_gui = 'passenger', 
                         impatience = 1.0,
                         emissionclass= 'HBEFA3/PC',
-                        times_boarding = 10.0,
+                        times_boarding = 4.0,
                         times_loading = 90.0,
                         sublane_alignment_lat = 'center',
                         sublane_speed_max_lat = 1.0,
                         sublane_gap_min_lat = 0.12,
+                        carfollowermodels = CARFOLLOWMODELS[0],
                         )
                         
         self.add_vtype('bicycle',  
@@ -889,6 +954,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 3.0, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.8,
                         sigma = 0.7, 
                         length = 1.6, 
                         width = 0.9,
@@ -922,6 +988,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 4.5, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.8,
                         sigma = 0.7, 
                         length = 1.5,
                         height = 1.7,
@@ -950,6 +1017,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 4.5, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.9,
                         sigma = 0.7, 
                         length = 1.5,
                         height = 1.7,
@@ -980,6 +1048,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 2.5, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.9,
                         sigma = 0.5, 
                         length = 5.0, 
                         height = 1.80,
@@ -999,6 +1068,7 @@ class VehicleTypes(am.ArrayObjman):
                         sublane_alignment_lat = 'center',
                         sublane_speed_max_lat = 0.8,
                         sublane_gap_min_lat = 0.12,
+                        has_taxi_device = True,
                         )  
                                                       
         self.add_vtype('bus', 
@@ -1007,6 +1077,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 2.0, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 1.0,
                         sigma = 0.9, 
                         length = 12.0, 
                         height = 3.4,
@@ -1035,6 +1106,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 2.0, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 1.0,
                         sigma = 0.9, 
                         length = 17.9, 
                         width = 2.5,
@@ -1064,6 +1136,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 1.2,
                         decel_apparent = 1.5,
                         decel_emergency  = 1.5, 
+                        tau = 1.0,
                         sigma = 0.9, 
                         length = 22.0, 
                         width = 2.4,
@@ -1091,6 +1164,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 1.2, 
                         decel_apparent = 1.5,
                         decel_emergency  = 1.5, 
+                        tau = 1.0,
                         sigma = 0.9, 
                         length = 36.0, 
                         width = 3.0,
@@ -1117,6 +1191,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 3.5, 
                         decel_apparent = 5.5,
                         decel_emergency  = 5.0, 
+                        tau = 0.9,
                         sigma = 0.5, 
                         length = 5.0, 
                         height = 2.50,
@@ -1143,7 +1218,8 @@ class VehicleTypes(am.ArrayObjman):
                         accel = 1.5, 
                         decel = 2.5,
                         decel_apparent = 5.0,
-                        decel_emergency  = 5.0,  
+                        decel_emergency  = 5.0, 
+                        tau = 0.9, 
                         sigma = 0.5, 
                         length = 8.0, 
                         height = 3.50,
@@ -1171,6 +1247,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 2.0, 
                         decel_apparent = 4.0,
                         decel_emergency  = 4.0, 
+                        tau = 0.9,
                         sigma = 0.5, 
                         length = 10.0, 
                         height = 4.50,
@@ -1198,6 +1275,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 2.0, 
                         decel_apparent = 4.0,
                         decel_emergency  = 4.0,
+                        tau = 1.5,
                         sigma = 0.5, 
                         length = 12.0, 
                         height = 3.50,
@@ -1224,6 +1302,7 @@ class VehicleTypes(am.ArrayObjman):
                         decel = 3.5, 
                         decel_apparent = 8.0,
                         decel_emergency  = 8.0,
+                        tau = 0.9,
                         sigma = 1.0, 
                         length = 3.5,
                         width = 1.6, 
@@ -1306,9 +1385,10 @@ class VehicleTypes(am.ArrayObjman):
             id_mode = MODES[mode]
         
         #print 'select_by_mode',id_mode, mode
-        #print '  ids_mode',self.ids_mode.get_value()    
+        #print '       ids',self.get_ids()
+        #print '  ids_mode',self.ids_mode[self.get_ids()]
         ids =self.select_ids(self.ids_mode.get_value()==id_mode)
-        #print 'select_by_mode',id_mode,self.ids_sumo[ids]#
+        #print '  ids_type',self.ids_sumo[ids]#
         #print '  ids_mode',self.ids_mode.get_value()
         if is_sumoid:
             idval = self.ids_sumo[ids]
@@ -1402,7 +1482,7 @@ class VehicleTypes(am.ArrayObjman):
     def _write_xml_body(self, fd,  indent, objconfigs, idcolconfig_include_tab,colconfigs, 
                         objcolconfigs,
                         xmltag_item, attrconfig_id, xmltag_id, ids,ids_xml):
-        print 'Vtypes._write_xml_body ident,ids',self.ident,ids
+        #print 'Vtypes._write_xml_body ident,ids',self.ident,ids
         #print '  xmltag_item %s,xmltag_id %s,attrconfig_id %s'%(xmltag_item,xmltag_id ,attrconfig_id)       
         
         # !!!these attrs cause error in duaiterate and duaroute in version 1.0
@@ -1426,7 +1506,7 @@ class VehicleTypes(am.ArrayObjman):
         for _id in ids:
             fd.write(xm.start(xmltag_item,indent+2))
             
-            print '   vtypes:make tag and id',_id
+            #print '   vtypes:make tag and id',_id
             if xmltag_id == '':
                 # no id tag will be written
                 pass
@@ -1446,9 +1526,9 @@ class VehicleTypes(am.ArrayObjman):
             else:
                 #print  '  write all other modes'
                 attrconfigs_key = self.get_group('key')
-                print ' write columns',len(scalarcolconfigs)>0,len(idcolconfig_include_tab)>0,len(objcolconfigs)>0
+                #print ' write columns',len(scalarcolconfigs)>0,len(idcolconfig_include_tab)>0,len(objcolconfigs)>0
                 for attrconfig in scalarcolconfigs:
-                    print '    scalarcolconfig',attrconfig.attrname
+                    #print '    scalarcolconfig',attrconfig.attrname
                     if attrconfig.attrname not in attrsnames_exclude:
                         if attrconfig not in attrconfigs_key:
                             attrconfig.write_xml(fd,_id)
@@ -1458,6 +1538,8 @@ class VehicleTypes(am.ArrayObjman):
                 # insert lanechange model here:
                 fd.write(xm.num('laneChangeModel', self.lanechangemodel.get_value()))
             
+            if self.have_taxi_device[_id]:
+                    fd.write(""" line="taxi" """)
             #if len(attrconfigs_key)==0:
             #    # no keyword parameters
             #    fd.write(xm.stopit())
@@ -1470,14 +1552,17 @@ class VehicleTypes(am.ArrayObjman):
                 fd.write((indent+4)*' '+"""<param key="has.battery.device" value="true"/>\n""")
                 
                 for attrconf in eprofiles.get_group('key'):
-                    print '    eprofile',attrconf.attrname,attrconf.xmltag,'value',attrconf[id_eprofile]
+                    #print '    eprofile',attrconf.attrname,attrconf.xmltag,'value',attrconf[id_eprofile]
                     fd.write((indent+4)*' '+"""<param key="%s" value="%.3f"/>\n"""%(attrconf.xmltag,attrconf[id_eprofile]))
                     
                   
                 for attrconf in attrconfigs_key:
-                    print '    param',attrconf.attrname,attrconf.xmltag,'value',attrconf[id_eprofile]
+                    #print '    param',attrconf.attrname,attrconf.xmltag,'value',attrconf[id_eprofile]
                     fd.write((indent+4)*' '+"""<param key="%s" value="%.3f"/>\n"""%(attrconf.xmltag,attrconf[_id]))
-                    
+            
+            if self.have_taxi_device[_id]:
+                    fd.write((indent+4)*' '+"""<param key="has.taxi.device" value="true"/>\n""")
+            
             fd.write(xm.end(xmltag_item,indent+4))
             
                 
@@ -1496,7 +1581,7 @@ class VehicleTypes(am.ArrayObjman):
         indent=0
 ##        
         
-        self.parent.vtypes.write_xml(   fd, indent=indent,
+        self.write_xml(   fd, indent=indent,
                                         #ids = ids_vtype_selected,
                                         is_print_begin_end = True)
         fd.close()  
@@ -1534,7 +1619,7 @@ class VtypeReader(handler.ContentHandler):
         if name == 'vType':
             params = {}
             
-            print 'startElement',attrs['id'],self._id_vclass_dist
+            #print 'startElement',attrs['id'],self._id_vclass_dist
             if attrs.has_key('laneChangeModel'):
                 lanechangemodel = attrs['laneChangeModel']
                 if lanechangemodel in LANECHANGEMODELS:
@@ -1553,7 +1638,7 @@ class VtypeReader(handler.ContentHandler):
                     attrconfig = self._xmlattrmap[xmltag]
                     params[attrconfig.attrname] = attrconfig.get_value_from_xmlattr(attrs)
                     
-            print '   params',params
+            #print '   params',params
             self._add_vtype(attrs['id'], **params)
             
         elif name == 'vTypeDistribution':
@@ -1569,4 +1654,4 @@ class VtypeReader(handler.ContentHandler):
             
             
             
-            
+

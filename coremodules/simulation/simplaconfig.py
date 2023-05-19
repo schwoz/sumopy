@@ -12,7 +12,7 @@ For platooning up to four operational modes may be specified apart from the norm
 """
 import os, sys
 import numpy as np
-
+#print 'module simplaconfig SUMO_HOME',os.environ['SUMO_HOME'],'SUMO_HOME' in os.environ
 try:
     if 'SUMO_HOME' in os.environ:
         tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
@@ -26,7 +26,10 @@ except:
     print 'WARNING: No module simpla in syspath. Please provide SUMO_HOME.'
 
     simpla = None
-    
+
+# local simpla     
+#import simpla
+
 from agilepy.lib_base.processes import Process
 #from xml.sax import saxutils, parse, handler
 
@@ -41,11 +44,13 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                         name = 'Simple Platooning configuration', 
                         info ='Configuration of simple platooning service. Simpla is a service that allows to crate platoons in any simulation. The platooning option must be enabled in the Traci micro simulation.',
                         xmltag = 'configuration',
+                        version = 0.2,
                         **kwargs):
             #print 'SimplaConfig.__init__',name
             
             self._init_objman(  ident = 'simplaconfig', parent = simulation, 
                                 name = name, info = info, xmltag = xmltag,
+                                version = 0.3,
                                 **kwargs)
                                 
             attrsman = self.set_attrsman(cm.Attrsman(self))
@@ -69,13 +74,34 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
             attrsman = self.get_attrsman()
             scenario = self.get_scenario()
             
+            is_update = False                        
+            if not hasattr(self,'_version'):
+                # crazy simpla has no version???
+                is_update = True
+                self._version = 0.0
+                
+            elif self.get_version()<0.2:
+                is_update = True
+                
             
+            if is_update:
+                # there were config errors in the 0.0 version
+                attrsman.delete('tau_follower') 
+                if  hasattr(self,'dist_min_follower'):
+                    attrsman.delete('dist_min_follower') 
+                if  hasattr(self,'sigma_follower'):
+                    attrsman.delete('sigma_follower')
+                
+            if self.get_version()<0.3:
+                 # this would remove _private entirely
+                 #self.is_enabled.del_groupname('_private') 
+                  attrsman.delete('is_enabled') 
+                  
             self.is_enabled  = attrsman.add(cm.AttrConf(  'is_enabled', False,
-                                    groupnames = ['_private','options'], 
+                                    groupnames = ['options'], 
                                     name = 'Enabled',
                                     info = """Enable platooning""",
-                                    ))
-                                    
+                                    ), is_prepend = True)
             
             # here we ged classes not vehicle type
             # specific vehicle type within a class will be generated later 
@@ -205,39 +231,34 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                                     info = """Specifies the acceleration factor to be used as follower.""",
                                     ))
             
-            self.accelfactor_catchup =  attrsman.add(cm.AttrConf(  'accelfactor_catchup',1.0,
-                                    groupnames = ['options','dynamics'], 
-                                    name = 'Accel. factor catchup',
-                                    info = """Specifies the acceleration factor to be used as catchup.""",
-                                    ))
             
-            self.accelfactor_catchup_follower =  attrsman.add(cm.AttrConf(  'accelfactor_catchup_follower',1.0,
-                                    groupnames = ['options','dynamics'], 
-                                    name = 'Accel. factor catchup follower',
-                                    info = """Specifies the acceleration factor to be used as catchup follower.""",
-                                    ))
+            
                                                             
-            self.decelfactor_follower =  attrsman.add(cm.AttrConf(  'decelfactor_follower',1.0,
-                                    groupnames = ['options','accelfactors'], 
+            self.decelfactor_follower =  attrsman.add(cm.AttrConf('decelfactor_follower',1.0,
+                                    groupnames = ['options','dynamics'], 
                                     name = 'Decel. factor follower',
                                     info = """Specifies the deceleration factor to be used as follower.""",
                                     ))  
-                                    
-            self.tau_follower = attrsman.add(cm.AttrConf(  'tau_follower', 0.2,
+            
+            
+                                        
+            self.tau_follower = attrsman.add(cm.AttrConf('tau_follower', 0.2,
                                     groupnames = ['options','dynamics'], 
                                     name = 'Reaction time follower',
                                     info = "Follower's reaction time.",
                                     unit = 's',
                                     )) 
-                                    
-            self.dist_min_follower = attrsman.add(cm.AttrConf(  'tau_follower', 0.3,
+            
+            
+                                   
+            self.dist_min_follower = attrsman.add(cm.AttrConf(  'dist_min_follower', 0.3,
                                     groupnames = ['options','dynamics'], 
                                     name = 'Min. gap follower',
                                     info = "Follower's reaction time.",
                                     unit = 'm',
                                     )) 
                                     
-            self.sigma_follower = attrsman.add(cm.AttrConf(  'tau_follower', 0.0,
+            self.sigma_follower = attrsman.add(cm.AttrConf(  'sigma_follower', 0.0,
                                     groupnames = ['options','dynamics'], 
                                     name = 'Driver follower',
                                     info = "Follower's driver imperfection in driving (between 0 and 1). Used only in follower models  SUMOKrauss, SKOrig.",
@@ -249,20 +270,23 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                                     name = 'Keep platoon vtypes',
                                     info = "Keep platoon specific vtypes after simulation in the vehicle type database. This for reviewing purpose and not required.",
                                     ))
-        
+            self.set_version(0.3) 
+            
         def enable(self, is_enabled):
             """Enables simulation with platoons. Must be called before preparing simulation."""
             self.is_enabled = is_enabled
             
         def prepare_sim(self):
-            #self.add_vtypes()# done in get_writexmlinfo
-            self.export_config()
-            print 'Simplaconfig.prepare_sim',self.configfilepath,self.is_enabled
-            simpla.load(self.configfilepath)
+            if self.is_enabled:
+                  #self.add_vtypes()# done in get_writexmlinfo means in get_vtypes()
+                  self.export_config()
+                  print 'Simplaconfig.prepare_sim',self.configfilepath,self.is_enabled
+                  simpla.load(self.configfilepath)
         
         def finish_sim(self):
-            if not self.is_keep_vtypes:
-                self.del_vtypes()
+            if self.is_enabled:
+                  if not self.is_keep_vtypes:
+                      self.del_vtypes()
                 
         def export_config(self):
             self.configfilepath = self.parent.get_scenario().get_rootfilepath()+'.simpla.xml'
@@ -271,6 +295,9 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
         
             
         def write_xml(self,fd,indent=0):
+            """
+            Write simpla xml config file
+            """
             print 'Simplaconfig.write_xml'
             fd.write(xm.begin(self.xmltag,indent))
             attrsman = self.get_attrsman()
@@ -361,32 +388,40 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                 self._add_vtypes(vtypes, ids_vtype, 'leader',
                                     coloroffset = np.array([co,0,0,1],dtype = np.float32),
                                     colorfactor = np.array([cf,0,0,1],dtype = np.float32),
+                                    carfollowermodel = 'ACC',
                                     )
                 
                 self._add_vtypes(vtypes, ids_vtype, 'follower',
                                     accelfactor = self.accelfactor_follower,
                                     decelfactor = self.decelfactor_follower,
-                                    tau=self.tau_follower,
+                                    tau = self.tau_follower,
                                     sigma = self.sigma_follower,
                                     dist_min = self.dist_min_follower,
                                     coloroffset = np.array([0,co,0,1],dtype = np.float32),
                                     colorfactor = np.array([0,cf,0,1],dtype = np.float32),
+                                    carfollowermodel = 'CACC',
                                     )
                 
                 self._add_vtypes(vtypes, ids_vtype, 'catchup',
-                                    accelfactor = self.accelfactor_catchup,
+                                    accelfactor = self.accelfactor_follower,
+                                    decelfactor = self.decelfactor_follower,
+                                    tau = self.tau_follower,
+                                    sigma = self.sigma_follower,
+                                    dist_min = self.dist_min_follower,
                                     coloroffset = np.array([co,co,co,1],dtype = np.float32),
                                     colorfactor = np.array([0,0,cf,1],dtype = np.float32),
+                                    carfollowermodel = 'ACC',
                                     )
                                     
                 self._add_vtypes(vtypes, ids_vtype, 'catchupFollower',
-                                    accelfactor = self.accelfactor_catchup_follower,
+                                    accelfactor = self.accelfactor_follower,
                                     decelfactor = self.decelfactor_follower,
-                                    tau=self.tau_follower,
+                                    tau = self.tau_follower,
                                     sigma = self.sigma_follower,
                                     dist_min = self.dist_min_follower,
                                     coloroffset = np.array([0,co,0,1],dtype = np.float32),
-                                    colorfactor = np.array([0,cf,0,1],dtype = np.float32),
+                                    colorfactor = np.array([0,cf,cf,1],dtype = np.float32),
+                                    carfollowermodel = 'CACC',
                                     )
                 
         
@@ -395,10 +430,11 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
             """
             Returns used vtypes for export
             """
+            # ATTENTION: here the platoon vtypes are actually added
             if not self.is_enabled:
                 return []
             
-            print 'Simpla.get_writexmlinfo'
+            print 'Simpla.get_vtypes'
             plattype_original = 'original'
             # add vtypes for platooning here
             self.add_vtypes()
@@ -415,7 +451,15 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
             """Delete all necessary vtypes for platooning from vtype database."""
             
             vtypes = self.get_scenario().demand.vtypes
-            vtypes.del_rows(self.get_vtypes())
+            plattype_original = 'original'
+            ids_vtypes_plat = []
+            for plattypes in self._typemap.values():
+                for plattype, id_vtype in plattypes.iteritems():
+                    if plattype != plattype_original:
+                        ids_vtypes_plat.append(id_vtype)
+            
+            print 'del_vtypes',ids_vtypes_plat
+            vtypes.del_rows(ids_vtypes_plat)
             self._typemap = {}
             
             
@@ -423,7 +467,8 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                                     accelfactor = 1.0, decelfactor = 1.0,
                                     tau = np.nan, sigma = np.nan, dist_min = np.nan,
                                     coloroffset = np.zeros(4,np.float32),
-                                    colorfactor = np.ones(4,np.float32)):
+                                    colorfactor = np.ones(4,np.float32),
+                                    carfollowermodel = 'Krauss'):
             print '_add_vtypes', ids , plattype
             n= len(ids)
             ids_new = vtypes.add_rows(n = len(ids))
@@ -451,6 +496,11 @@ class SimplaConfig(DemandobjMixin,cm.BaseObjman):
                     
                 colconfig.set(ids_new, values = values)
             
+            # adjust emergency breake deceleration to 
+            # comfort deceleration
+            # this reduces headway
+            vtypes.decels_apparent[ids_new] = vtypes.decels[ids_new]+0.1
+            vtypes.decels_emergency[ids_new] = vtypes.decels[ids_new]+0.1
             # update typemap database      
             for _id, _id_new in zip(ids,ids_new):
                 if self._typemap.has_key(_id):

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes  version="1.3">
+  <location  netOffset="-687565.0,-4927630.0" projParameter="+proj=utm +zone=32 +ellps=WGS84 +datum=WGS84 +units=m +no_defs" convBoundary="0.0,0.0,1209.62,1047.04" origBoundary="11.358681,44.477629,11.373864,44.487018"/>
+  <node  id="1282529686" x="475.65" y="214.17" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="1352203848" x="448.3" y="369.77" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="1820491659" x="267.5" y="686.86" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="1820491661" x="177.77" y="730.51" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="251883875" x="280.34" y="381.95" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="251883875"/>
+  <node  id="251884400" x="597.81" y="1015.11" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164586" x="222.01" y="879.65" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164587" x="289.06" y="771.75" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164588" x="378.03" y="728.54" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164590" x="562.02" y="638.45" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164591" x="676.52" y="582.4" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="252164591"/>
+  <node  id="252164726" x="387.54" y="964.2" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164727" x="189.79" y="508.35" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164728" x="141.84" y="474.03" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164783" x="456.8" y="689.79" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="252164783"/>
+  <node  id="252164799" x="411.21" y="281.41" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164874" x="513.7" y="217.74" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164903" x="706.42" y="323.14" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164983" x="640.51" y="833.75" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252164984" x="540.28" y="881.93" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="252164984"/>
+  <node  id="252165017" x="357.92" y="896.12" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165022" x="441.14" y="857.74" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165023" x="516.37" y="827.41" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165083" x="356.42" y="520.26" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165084" x="485.67" y="460.01" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165085" x="598.08" y="407.25" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165111" x="403.44" y="599.87" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165128" x="520.49" y="545.0" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="252165129" x="638.1" y="495.59" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="253823167" x="673.81" y="597.92" z="0.0" customShape="0" type="dead_end" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="262702049" x="762.85" y="775.01" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="262702049"/>
+  <node  id="300588141" x="140.14" y="209.44" z="0.0" customShape="0" type="dead_end" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="301647159" x="123.31" y="0.0" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="301647166" x="211.66" y="110.68" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="301647167" x="371.48" y="319.64" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="3526012905" x="0.0" y="598.55" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="3526156976" x="228.64" y="413.17" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="365178425" x="231.76" y="1047.04" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="365178448" x="163.31" y="909.32" z="0.0" customShape="0" type="dead_end" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="4457656203" x="297.11" y="768.44" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="566682635" x="1209.62" y="554.84" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="628644554" x="1044.57" y="629.52" z="0.0" customShape="0" type="traffic_light" tlType="static" radius="1.5" keepClear="1" tl="628644554"/>
+  <node  id="877225128" x="228.88" y="881.62" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225136" x="302.32" y="775.59" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225139" x="462.83" y="703.77" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225143" x="384.37" y="735.74" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225145" x="565.18" y="645.8" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225146" x="469.53" y="691.22" z="0.0" customShape="0" type="right_before_left" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225147" x="163.32" y="918.94" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225158" x="673.23" y="575.67" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225159" x="558.93" y="631.24" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225160" x="463.4" y="677.69" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225174" x="466.75" y="685.1" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="877225210" x="931.56" y="450.01" z="0.0" customShape="0" type="dead_end" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="cluster_1352203847_252164873" x="560.99" y="322.74" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+  <node  id="cluster_252165080_252165087" x="293.61" y="538.91" z="0.0" customShape="0" type="priority" tlType="none" radius="1.5" keepClear="1"/>
+</nodes>

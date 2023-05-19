@@ -207,6 +207,7 @@ class Personresults(am.ArrayObjman):
                 ('times_travel_total', {'name':'Total travel time',     'unit':'s',     'default':0.0, 'info':'Total travel time, including all trips and waiting times, but excluding activities.','groupnames':['tripdata']}),
                 ('times_walk', {'name':'Walking time',     'unit':'s',     'default':0.0, 'info':'Time walking, excluding waiting time.','groupnames':['tripdata']}),
                 ('times_ride', {'name':'Riding time',     'unit':'s',     'default':0.0, 'info':'Time riding on a vehicle, excluding waiting time.','groupnames':['tripdata']}),
+                ('distances_ride', {'name':'Riding distance',    'unit':'m',     'default':0.0, 'info':'Distance riding on a vehicle.','groupnames':['tripdata']}),
                 ('times_wait', {'name':'Waiting time',     'unit':'s',     'default':0.0, 'info':'Time waiting for a vehicle.','groupnames':['tripdata']}),
                 ('times_activity', {'name':'Activity time',     'unit':'s',     'default':0.0, 'info':'Time having some activities.','groupnames':['tripdata']}),
                 ('times_depart',    {'name':'Dep. time', 'xmltag':'depart',   'unit':'s',     'default':0.0, 'info':'Time beginning firts trip or activity.','groupnames':['tripdata']}),
@@ -255,16 +256,20 @@ class Personresults(am.ArrayObjman):
         
         times_walk = np.array(reader.times_walk, dtype = np.int32)
         times_ride = np.array(reader.times_ride, dtype = np.int32)
+        distances_ride = np.array(reader.distances_ride, dtype = np.int32)
         times_wait = np.array(reader.times_wait, dtype = np.int32)
+        times_activity = np.array(reader.times_activity, dtype = np.int32)
         
         
         ids = self.add_rows(ids_person = reader.ids_person, 
                             times_travel_total = times_walk + times_ride + times_wait,
                             times_walk = times_walk,
                             times_ride = times_ride,
+                            distances_ride = distances_ride,
                             times_wait = times_wait,
                             times_depart = reader.times_depart,
                             times_arrival = reader.times_arrival,
+                            times_activity = reader.times_activity,
                             )
         return ids
          
@@ -286,7 +291,9 @@ class PersonReader(handler.ContentHandler):
         self.times_depart = []
         self.times_wait = []
         self.times_ride = []
+        self.distances_ride = []
         self.times_walk = []
+        self.times_activity = []
         self.times_arrival = []
         
 
@@ -311,7 +318,9 @@ class PersonReader(handler.ContentHandler):
                 self.times_depart.append(self._time_laststage)
                 self._time_wait = 0
                 self._time_ride = 0
+                self._dist_ride = 0
                 self._time_walk = 0
+                self._time_activity = 0
             else:
                 self.is_person_valid = False 
                 
@@ -327,12 +336,20 @@ class PersonReader(handler.ContentHandler):
                 time_arrival = float(attrs['arrival'])
                 self._time_wait += time_depart-self._time_laststage
                 self._time_ride += time_arrival - time_depart 
+                self._dist_ride += float(attrs['routeLength'])
                 self._time_laststage = time_arrival
+                
+        elif name == 'stop':
+            if self.is_person_valid:
+                self._time_activity += float(attrs['duration'])
+                self._time_laststage = float(attrs['arrival'])
     
     def endElement(self, name):
         if name == self._element:
             if self.is_person_valid:
                 self.times_wait.append(self._time_wait)
                 self.times_ride.append(self._time_ride)
+                self.distances_ride.append(self._dist_ride)
                 self.times_walk.append(self._time_walk)
                 self.times_arrival.append(self._time_laststage)
+                self.times_activity.append(self._time_activity)

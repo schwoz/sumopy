@@ -1,6 +1,7 @@
 import wx
 from agilepy.lib_wx.processdialog import ProcessDialog,ProcessDialogInteractive
 from coremodules.demand import origin_to_destination_mpl
+from coremodules.misc.matplottools import ResultDialog
 import agilepy.lib_base.classman as cm
 import agilepy.lib_base.arrayman as am
 from agilepy.lib_base.misc import get_inversemap
@@ -59,8 +60,8 @@ class OdCommonMixin:
                 id_act_dest = -1
             else:
                 activitytypechoices = activitytypes.names.get_indexmap()
-                id_act_orig = activitytypes.names.get_id_from_index(kwargs.get('id_act_orig','home'))
-                id_act_dest = activitytypes.names.get_id_from_index(kwargs.get('id_act_dest','work'))
+                id_act_orig = activitytypes.names.get_id_from_index(kwargs.get('act_orig','home'))
+                id_act_dest = activitytypes.names.get_id_from_index(kwargs.get('act_dest','work'))
                 
             self.add(cm.AttrConf( 'id_activitytype_orig',id_act_orig,
                             groupnames = ['options'], 
@@ -118,11 +119,12 @@ class OdFlowsWxGuiMixin:
             )
         
             
-        menubar.append_item( 'demand/Zone-to-zone demand/od plots',
+        menubar.append_item( 'demand/Zone-to-zone demand/OD plots...',
             self.on_od_plots, 
-            info='Od plots.',
+            bitmap = self.get_icon('icon_mpl.png'),
             ) 
-                 
+           
+        
         menubar.append_item( 'demand/Zone-to-zone demand/clear zone-to-zone flows',
             self.on_clear_odtrips, 
             info='Clear all zone to zone trips.',
@@ -142,10 +144,10 @@ class OdFlowsWxGuiMixin:
 
     def on_od_plots(self, event=None):
         """
-        Plot Od data.
+        Plot OD data with matplotlib.
         """
         p = origin_to_destination_mpl.OdPlots('odplots', self._demand, logger = self._mainframe.get_logger(),)
-        dlg = ProcessDialog(self._mainframe, 
+        dlg = ResultDialog(self._mainframe, 
                                 p,
                                 title = 'Od Plot')
                              
@@ -530,8 +532,49 @@ class AddOdWizzard(OdCommonMixin,am.ArrayObjman):
                                 )
         
         self.add_odoptions_common(odintervals.parent.get_scenario().net.modes, odintervals.parent.activitytypes,**kwargs)                        
-                                      
+                                    
+        ids_zone = zones.get_ids()
+        zonechoices = {}
+        for id_zone, name_zone in zip(ids_zone, zones.ids_sumo[ids_zone]):
+            zonechoices[name_zone] = id_zone
+        #print '  zonechoices',zonechoices
+        # make for each possible pattern a field for prob
+        #if len(zonechoices) > 0:
+        self.add(cm.ListConf('ids_zone_orig_filter',kwargs.get('ids_zone_orig_filter',[]), 
+                                                groupnames = ['options'], 
+                                                choices = zonechoices,
+                                                name = 'Filter zones of origin', 
+                                                info = """Filters flows if its origin is in one of these zones. If no zone is given, then no filtering takes place.""",
+                                                )) 
         
+        self.add(cm.ListConf('ids_zone_dest_filter',kwargs.get('ids_zone_dest_filter',[]), 
+                                                groupnames = ['options'], 
+                                                choices = zonechoices,
+                                                name = 'Filter zones of destination', 
+                                                info = """Filters flows if its destination is in one of these zones. If no zone is given, then no filtering takes place.""",
+                                                )) 
+        
+        self.add(cm.ListConf('ids_zone_cross_filter',kwargs.get('ids_zone_cross_filter',[]), 
+                                                groupnames = ['options'], 
+                                                choices = zonechoices,
+                                                name = 'Filter zones to cross', 
+                                                info = """Filters flows if a straight line between origin and destination crosses at least one of these zones. If no zone is given, then no filtering takes place.""",
+                                                )) 
+        
+        self.add(cm.AttrConf('dist_min',kwargs.get('dist_min',-1.0), 
+                                                groupnames = ['options'], 
+                                                name = 'Filter zones with min. dist.', 
+                                                unit = 'm',
+                                                info = """Filters flows if the straight line between origin and destination is greater than the given minimum distance. If negative, then no filtering takes place.""",
+                                                )) 
+                                                                                                                                
+        self.add(cm.AttrConf('dist_max',kwargs.get('dist_max',-1.0), 
+                                                groupnames = ['options'], 
+                                                name = 'Filter zones with max. dist.', 
+                                                unit = 'm',
+                                                info = """Filters flows if the straight line between origin and destination is less than the given minimum distance. If negative, then no filtering takes place.""",
+                                               )) 
+                                                
         self.add_col(am.ArrayConf( 'names_orig', '', 
                                     dtype = 'object',
                                     groupnames = ['state'], 
@@ -595,17 +638,25 @@ class AddOdWizzard(OdCommonMixin,am.ArrayObjman):
         """
         Add demand to scenario.
         """
-        #print 'AddOdm.add_demand'
+        print 70*'='
+        print 'AddOdm.add_demand begin [h]',self.t_start.get_value()/3600,'end [h]',self.t_end.get_value()/3600,'id_mode',self.id_mode.get_value()
+        #print '   ids_zone_orig_filter',self.ids_zone_orig_filter.get_value()
+        #print '   ids_zone_dest_filter',self.ids_zone_dest_filter.get_value()
         odintervals = self.parent
         #demand = self._scenario.demand
         #odm={} # create a temporary dict with (o,d) as key and trips as value
         ids = self.get_ids()
-        odintervals.add_od_flows(   self.t_start.value, self.t_end.value, 
-                                    self.id_mode.value, 
-                                    self.id_activitytype_orig.value, self.id_activitytype_dest.value,
-                                    self.scale.value, 
+        odintervals.add_od_flows(   self.t_start.get_value(), self.t_end.get_value(), 
+                                    self.id_mode.get_value(), 
+                                    self.id_activitytype_orig.get_value(), self.id_activitytype_dest.get_value(),
+                                    self.scale.get_value(), 
                                     self.names_orig[ids],self.names_dest[ids],
-                                    self.tripnumbers[ids]
+                                    self.tripnumbers[ids],
+                                    ids_zone_orig_filter = self.ids_zone_orig_filter.get_value(),
+                                    ids_zone_dest_filter = self.ids_zone_dest_filter.get_value(),
+                                    ids_zone_cross_filter = self.ids_zone_cross_filter.get_value(),
+                                    dist_min = self.dist_min.get_value(),
+                                    dist_max = self.dist_max.get_value(),
                                     )
         
 
@@ -618,7 +669,7 @@ class AddOdWizzard(OdCommonMixin,am.ArrayObjman):
         # make shure that index table is updated
         names_zone.rebuild_indices()
         f=open(filepath,'r')
-        #print '  open',filepath
+        print '  import_csv',filepath
         i_line = n_firstline
         for line in f.readlines():
             #print '    ',line,
@@ -636,7 +687,7 @@ class AddOdWizzard(OdCommonMixin,am.ArrayObjman):
                                         tripnumbers = int(tripnumbers_str)
                                         )
                 else:
-                    print 'WARNING: unknown zonename in line %d of file %s'%(i_line, filepath)
+                    print 'WARNING: unknown zonename %s or %s in line %d of file %s'%(name_orig,name_dest,i_line, filepath)
                 
             else:
                 if len(cols) != 0:

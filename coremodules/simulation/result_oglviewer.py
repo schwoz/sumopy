@@ -832,7 +832,7 @@ class  Resultviewer(OGleditor):
                     is_menu=False, # create menu items
                     Debug = 0,
                     ):
-        print 'Resultviewer.__init__ parent',parent
+        #print 'Resultviewer.__init__ parent',parent
         self._drawing = None
         self.prefix_anim = 'anim_' 
         self.layer_anim = 1000.0

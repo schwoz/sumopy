@@ -4,20 +4,39 @@ import agilepy.lib_base.arrayman as am
 from agilepy.lib_wx.ogleditor import *
 from agilepy.lib_wx.objpanel import ObjPanel
 from agilepy.lib_base.processes import Process
-from agilepy.lib_wx.processdialog import ProcessDialog
+from agilepy.lib_wx.processdialog import ProcessDialog, ProcessDialogInteractive
 from coremodules.network.network import SumoIdsConf, MODES
-import detectorflows
+import detectorflows, detectorflows_mpl
 
 
 class DetectorflowsWxGuiMixin:
     """Contains Detector flow spacific functions that communicate between the widgets of the main wx gui
     and the functions of the plugin.
     """
-
+    
     def refresh_detectorflow(self,is_refresh):
         if is_refresh:
             neteditor = self.get_neteditor()
             #neteditor.add_toolclass(AddTurnflowTool)
+            
+        if is_refresh | self._is_needs_refresh:
+            self._is_needs_refresh = False
+            print '  is_refresh',is_refresh,self._is_needs_refresh
+            neteditor = self.get_neteditor()
+            drawing = self.get_drawing()
+            
+            # add or refresh facility drawing
+            drawing.set_element('detectordraws', DetectorDrawings, 
+                                    self._demand.detectorflows.detectors, layer = 150)
+            
+            
+                            
+            #neteditor.get_toolbox().add_toolclass(AddZoneTool)# will check if tool is already there
+            #neteditor.get_toolbox().add_toolclass(AddFacilityTool)
+            neteditor.draw()
+            
+        self._canvas = self.get_canvas()
+            
             
     def add_menu_detectorflow(self, menubar):
         menubar.append_menu( 'demand/detector flows',
@@ -28,28 +47,44 @@ class DetectorflowsWxGuiMixin:
             self.on_import_detectors_from_shape, 
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             ) 
+            
+        menubar.append_item( 'demand/detector flows/Redraw detectors',
+            self.on_redraw_detectorflow, 
+            ) 
         
         menubar.append_item( 'demand/detector flows/match detectors to lanes...',
             self.on_match_detectors, 
             bitmap = self.get_icon("fig_detectorflows_24px.png"),
             )
             
-
+        
         
         menubar.append_item( 'demand/detector flows/import measurements from csv...',
             self.on_import_measurements_from_csv, 
             bitmap = self.get_agileicon("Document_Import_24px.png"),
             ) 
         
+        menubar.append_item( 'demand/detector flows/alternative import measurements from csv...',
+            self.on_import_measurements_from_csv_alt, 
+            bitmap = self.get_agileicon("Document_Import_24px.png"),
+            )
+            
         menubar.append_item( 'demand/detector flows/Detector flows to routes...',
             self.on_detectorflows_to_routes, 
             ) 
             
-    
+        menubar.append_item( 'demand/detector flows/Update departure times from flows...',
+            self.on_update_departure_times, 
+            )
             
         menubar.append_item( 'demand/detector flows/clear detectors and flows',
             self.on_clear_detectorflows, 
             bitmap = wx.ArtProvider.GetBitmap(wx.ART_DELETE,wx.ART_MENU),
+            )
+            
+        menubar.append_item( 'demand/detector flows/Plot detector flows',
+            self.on_plot_detector_flows, 
+            bitmap = self.get_icon('icon_mpl.png'),
             )
             
         menubar.append_item( 'demand/detector flows/clear flows',
@@ -57,6 +92,59 @@ class DetectorflowsWxGuiMixin:
             bitmap = wx.ArtProvider.GetBitmap(wx.ART_DELETE,wx.ART_MENU),
             )
                 
+
+    def on_update_departure_times(self, event=None):
+        """
+        Generates virtual population from OD flow matrix.
+        """
+        
+        #self._demand.trips.clear_routes()
+        
+                    
+        self.proc = detectorflows.UpdateDeparturesFromDetectorflows(  'UpdateDeparturesFromDetectorflows',
+                                                self._demand.detectorflows, 
+                                                logger = self._mainframe.get_logger()
+                                                )
+        
+        
+        dlg = ProcessDialogInteractive( self._mainframe, 
+                                        self.proc,
+                                        title = self.proc.get_name(),
+                                        func_close = self.close_process,
+                                        )
+                         
+        dlg.CenterOnScreen()
+        
+        # this does not return until the dialog is closed.
+        #val = dlg.ShowModal()
+        print 'on_create_pop_from_odflows'
+        dlg.Show()
+        dlg.MakeModal(True) 
+
+    def on_plot_detector_flows(self, event=None):
+        """
+        Plot OD data with matplotlib.
+        """
+        importer = detectorflows_mpl.DetectorsPlots('odplots', self._demand, logger = self._mainframe.get_logger(),)
+        dlg = ProcessDialog(self._mainframe, importer)
+                         
+        dlg.CenterOnScreen()
+    
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            #print ">>>>>>>>>Unsuccessful\n"
+            dlg.Destroy()
+            
+        if dlg.get_status() == 'success':
+            #print ">>>>>>>>>successful\n"
+            # apply current widget values to scenario instance
+            dlg.apply()
+            dlg.Destroy()
+            self._mainframe.browse_obj(self._demand.detectorflows.detectors)
+    
   
             
     def on_import_detectors_from_shape(self, event=None):
@@ -82,7 +170,9 @@ class DetectorflowsWxGuiMixin:
             dlg.apply()
             dlg.Destroy()
             self._mainframe.browse_obj(self._demand.detectorflows.detectors)
-
+            self._is_needs_refresh = True
+            self.refresh_widgets()
+    
      
     def on_match_detectors(self, event=None):
         """Match current detectors to networl lanes"""
@@ -107,8 +197,33 @@ class DetectorflowsWxGuiMixin:
             dlg.apply()
             dlg.Destroy()
             self._mainframe.browse_obj(self._demand.detectorflows.detectors)
+            self._is_needs_refresh = True
+            self.refresh_widgets()
                 
-        
+    def on_import_measurements_from_csv_alt(self, event=None):
+        """Import detector flow measurements from CSV file."""
+        p = detectorflows.FlowsImporterAlt('flowmeasurementimporteralt',self._demand.detectorflows.flowmeasurements,
+                                                logger = self._mainframe.get_logger()
+                                                )
+        dlg = ProcessDialog(self._mainframe, p)
+                         
+        dlg.CenterOnScreen()
+    
+        # this does not return until the dialog is closed.
+        val = dlg.ShowModal()
+        #print '  val,val == wx.ID_OK',val,wx.ID_OK,wx.ID_CANCEL,val == wx.ID_CANCEL
+        #print '  status =',dlg.get_status()
+        if dlg.get_status() != 'success':#val == wx.ID_CANCEL:
+            #print ">>>>>>>>>Unsuccessful\n"
+            dlg.Destroy()
+            
+        if dlg.get_status() == 'success':
+            #print ">>>>>>>>>successful\n"
+            # apply current widget values to scenario instance
+            dlg.apply()
+            dlg.Destroy()
+            self._mainframe.browse_obj(self._demand.detectorflows.flowmeasurements)
+            
     def on_import_measurements_from_csv(self, event=None):
         """Import detector flow measurements from CSV file."""
         p = detectorflows.FlowsImporter('flowmeasurementimporter',self._demand.detectorflows.flowmeasurements,
@@ -153,7 +268,7 @@ class DetectorflowsWxGuiMixin:
     def on_detectorflows_to_routes(self, event=None):
         """Generates trips with routes, based on detector flow measurements using DFRouter.
         """
-
+    
         dfrouter = detectorflows.DFRouter(  self._demand.detectorflows,
                                             logger = self._mainframe.get_logger()
                                             )
@@ -172,8 +287,104 @@ class DetectorflowsWxGuiMixin:
             # apply current widget values to scenario instance
             dlg.apply()
             dlg.Destroy()
-            self._mainframe.browse_obj(self._demand.trips)    
+            self._mainframe.browse_obj(self._demand.trips)  
+            
+    def on_redraw_detectorflow(self, event=None):   
+        """Redraw detectors in Network"""
+        self._mainframe.browse_obj(self._demand.detectorflows)  
+        #self._is_needs_refresh = True
+        self.refresh_detectorflow(True)
+
+class DetectorDrawings(Circles):
+    def __init__(self, ident, detectors, parent,   **kwargs):
+        #self,ident, gpspoints, parent,
+        Circles.__init__(self, ident,  parent, name = 'Detectors',
+                            is_parentobj = False,
+                            is_fill = True, # Fill objects,
+                            is_outline = False, # show outlines
+                            n_vert = 5, # default number of vertex per circle
+                            linewidth = 1, 
+                            **kwargs)
         
+        
+        
+        
+                                        
+        self.delete('centers')
+        self.delete('radii')
+        
+        
+                                        
+        self.add(cm.AttrConf(  'color_default', np.array([1.0,1.0,0.3,0.95], np.float32),
+                                        groupnames = ['options','colors'],
+                                        metatype = 'color',
+                                        perm='wr', 
+                                        name = 'Default color', 
+                                        info = 'Default detector color.',
+                                        ))
+        
+                                        
+        
+                                        
+        self.set_netelement(detectors)
+        # explicit later
+        
+
+    def get_netelement(self):
+        return self._detectors
+    
+    def get_centers_array(self):
+        #return self._detectors.coords.value[self._inds_map]
+        return  self._detectors.coords[self.get_ids()]
+    
+    def get_radii_array(self):
+        return  2.0*np.ones(len(self), dtype = np.float32)
+        #self._gpspoints.radii[self.get_ids()]
+        #return self._gpspoints.radii.value[self._inds_map]
+    
+    def is_tool_allowed(self, tool, id_drawobj = -1):
+        """
+        Returns True if this tool can be applied to this drawobj.
+        Optionally a particular drawobj can be specified with id_drawobj.
+        """
+        # basic tools:
+        return tool.ident not in   ['select_handles','delete','stretch']#'configure',
+        #return tool.ident not in   ['delete','stretch']
+    
+    def set_netelement(self, detectors):
+        #print 'set_nodes'
+        self._detectors = detectors
+        #if len(self)>0:
+        #    self.del_rows(self.get_ids())
+        self.clear_rows()
+        
+        ids = self._detectors.get_ids()
+        n = len(ids) 
+
+        #self._inds_map = self._gpspoints.get_inds(ids)
+        
+        #print 'color_node_default',self.color_node_default.value
+        #print 'colors\n',  np.ones((n,1),np.int32)*self.color_node_default.value    
+        self.add_rows(      ids = ids, 
+                            #colors = np.ones((n,1),np.int32)*self.color_default.value,
+                            #colors_highl = self._get_colors_highl(np.ones((n,1),np.int32)*self.color_default.value),
+                            colors_fill = np.ones((n,1),np.int32)*self.color_default.value,
+                            colors_highl_highl = self._get_colors_highl(np.ones((n,1),np.int32)*self.color_default.value),
+                            #centers = self._nodes.coords[ids],
+                            #radii = self._nodes.radii[ids],
+                            )
+                            
+        self.centers = self._detectors.coords
+        self.radii = self.get_radii_array()
+        self.update()
+        
+    def update(self, is_update = True):
+        
+        if is_update:
+            self._update_vertexvbo()
+            self._update_colorvbo()
+            
+                    
 class DetectorflowCommonMixin:
     def add_options_common(self, turnflows = None):
             self.add(am.AttrConf(  't_start', 0,
@@ -210,6 +421,8 @@ class DetectorflowCommonMixin:
                                                 info = 'Transport mode.',
                                                 ))
 
+
+
 class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
     """
     TODO,NOT IN USE
@@ -233,7 +446,7 @@ class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
                             is_textbutton = False,
                             )
                             
-
+    
         self._init_select(is_show_selected = False) 
         
         
@@ -246,7 +459,7 @@ class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
                                     perm = 'r',
                                     info = 'This is the reference edge for the generated flows as well as turn-flows into adjason edges.',
                                     ))
-
+    
         
         self.add(cm.AttrConf(  'flow_generated', 0,
                                     groupnames = ['options'], 
@@ -277,7 +490,7 @@ class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
         self._bitmap = wx.Bitmap(os.path.join(iconpath,'fig_turnflow_32px.png'),wx.BITMAP_TYPE_PNG) 
         self._bitmap_sel = self._bitmap
     
-
+    
     
     def set_cursor(self):
         # http://www.wxpython.org/docs/api/wx.Cursor-class.html
@@ -362,7 +575,7 @@ class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
             
             if self.is_show_selected:
                 self.parent.refresh_optionspanel(self)
-
+    
         return is_draw
         
     def on_execute_selection(self,event):
@@ -537,3 +750,4 @@ class AddDetectorflowTool(DetectorflowCommonMixin,SelectTool):
         return self._optionspanel
         
         
+    

@@ -61,6 +61,50 @@ except:
     print __doc__
     raise
 
+AGES_STRAVA = {'unknown':0,
+                'Less than 18':1,
+                '18-24':2,
+                '25-34':3,
+                '35-44':4,
+                '45-54':5,
+                '55-64':6,
+                '65+':7,
+                }
+                
+GENDERS_STRAVA = {'0':'unknown','1':'Female','2':'Male'}
+ETHNICITIES_STRAVA = {'unknown':0,
+                'White':1,
+                'African American':2,
+                'Asian':3,
+                'Native American':4,
+                'Pacific Islander':5,
+                'Multi-racial':6,
+                'Hispanic / Mexican / Latino':7,
+                'Other':8,
+}
+INCOMES_STRAVA = {'unknown':0,
+                'Less than $20,000':1,
+                '$20,000 to $39,999':2,
+                '$40,000 to $59,999':3,
+                '60,000 to $74,999':4,
+                '$75,000 to $99,999':5,
+                '$100,000 or greater':6,}
+CYCLING_FREQUENCIES_STRAVA = {'unknown':0,
+                'Less than once a month':1,
+                'Several times per month':2,
+                'Several times per week':3,
+                'Daily':4,}
+RIDER_TYPES_STRAVA = {'unknown':0,
+                'Strong & fearless':1,
+                'Enthused & confident':2,
+                'Comfortable, but cautious':3,
+                'Interested, but concerned':4,}
+RIDER_HISTORIES_STRAVA = {'unknown':0,
+                'Since childhood':1,
+                'Several years':2,
+                'One year or less':3,
+                'Just trying it out / just started':4,
+}
 TRIPPUROPSES = {'unknown':-1,
                 'HomeToWork':1,
                 'WorkToHome':2,
@@ -69,8 +113,16 @@ TRIPPUROPSES = {'unknown':-1,
                 'SchoolToHome':5,
                 'Leisure':6,
                 'Other':7,
+                'Commute':8,
+                'Errand':9,
+                'Social':10,
+                'Work-Related':11,
+                'Exercise':12,
+                'School':13,
+                'other':14
                 }
-                
+
+              
 MONTHS = {'January':1,
                 'February':2,
                 'March':3,
@@ -169,13 +221,13 @@ COLOR_FASTEST_ROUTE =  np.array([198,0  ,255, 0.6*255], np.float32)/255
 
 # 2016
 
-#UserID	                    TripID	                    TimeStamp	Start DT	                Distance	 ECC	 AvgSpeed	 TrackType	 Sex	 Year	 Profession	 Frequent User	 ZIP	 Source	  TypeOfBike	 TipeOfTrip	 Max Spd
-#57249bcd88c537874f9fa1ae	57515edc88c537576ca3e16f	1464945480	2016-06-03T09:18:00.000Z	4.75	4.75	    10.16	    urban bicycle	F	1999	Studente	    yes		            cy-web-gpx	MyBike	    HomeToSchool	25.45
-#5550800888c53765217661aa	574ec13788c537476aa3e122	1464797040	2016-06-01T16:04:00.000Z	2.93	2.93	    5.87	    urban bicycle	F	1972	Worker	        yes	        40136	cy-web-gpx	--	--	                    0
-#5535586e88c53786637b23c6	574f3c3688c537c877a3e139	1464796080	2016-06-01T15:48:00.000Z	8.95	8.95	    7.84	    urban bicycle	M	1973	Lavoratore	    yes	        40133	cy-web-gpx	MyBike	    HomeToWork	    34.08
-#5550800888c53765217661aa	574ec12b88c537812fa3e118	1464781800	2016-06-01T11:50:00.000Z	3.75	3.75	    14.99	    urban bicycle	F	1972	Worker	        yes	        40136	cy-web-gpx	--	--	    0
-#5550800888c53765217661aa	574ec11988c5370944a3e107	1464778980	2016-06-01T11:03:00.000Z	2.77	2.77	    11.09	    urban bicycle	F	1972	Worker	        yes	        40136	cy-web-gpx	--	--	    0
-#55e5edfc88c5374b4974fdbc	574e98c988c5378163a3e11f	1464765060	2016-06-01T07:11:00.000Z	11.09	11.14	    15.63	    urban bicycle		1982		            SI		            cy-web-gpx	MyBike	    HomeToWork	    27.9
+#UserID                        TripID                        TimeStamp    Start DT                    Distance     ECC     AvgSpeed     TrackType     Sex     Year     Profession     Frequent User     ZIP     Source      TypeOfBike     TipeOfTrip     Max Spd
+#57249bcd88c537874f9fa1ae    57515edc88c537576ca3e16f    1464945480    2016-06-03T09:18:00.000Z    4.75    4.75        10.16        urban bicycle    F    1999    Studente        yes                    cy-web-gpx    MyBike        HomeToSchool    25.45
+#5550800888c53765217661aa    574ec13788c537476aa3e122    1464797040    2016-06-01T16:04:00.000Z    2.93    2.93        5.87        urban bicycle    F    1972    Worker            yes            40136    cy-web-gpx    --    --                        0
+#5535586e88c53786637b23c6    574f3c3688c537c877a3e139    1464796080    2016-06-01T15:48:00.000Z    8.95    8.95        7.84        urban bicycle    M    1973    Lavoratore        yes            40133    cy-web-gpx    MyBike        HomeToWork        34.08
+#5550800888c53765217661aa    574ec12b88c537812fa3e118    1464781800    2016-06-01T11:50:00.000Z    3.75    3.75        14.99        urban bicycle    F    1972    Worker            yes            40136    cy-web-gpx    --    --        0
+#5550800888c53765217661aa    574ec11988c5370944a3e107    1464778980    2016-06-01T11:03:00.000Z    2.77    2.77        11.09        urban bicycle    F    1972    Worker            yes            40136    cy-web-gpx    --    --        0
+#55e5edfc88c5374b4974fdbc    574e98c988c5378163a3e11f    1464765060    2016-06-01T07:11:00.000Z    11.09    11.14        15.63        urban bicycle        1982                    SI                    cy-web-gpx    MyBike        HomeToWork        27.9
 
 
 # csv 2016
@@ -188,9 +240,9 @@ COLOR_FASTEST_ROUTE =  np.array([198,0  ,255, 0.6*255], np.float32)/255
 # 2015 csv 
 
 # workouts
-#UserID	 TripID	 TimeStamp	 Start DT	  Distance	 AvgSpeed	 TrackType	 Sex	 Year	 Profession	 Frequent User	 ZIP
-#54eb068de71f393530a9a74d	54eb0737e71f394c2fa9a74d	1424692504	Mon, 23 Feb 2015 11:55:04 GMT	0	0	urban bicycle	M	1987	Developer	no	
-#54eb9374e71f39f02fa9a750	5505cb04e71f39542e25e2d4	1426442994	Sun, 15 Mar 2015 18:09:54 GMT	0	0.7	urban bicycle	M	1974	Worker	yes	40128
+#UserID     TripID     TimeStamp     Start DT      Distance     AvgSpeed     TrackType     Sex     Year     Profession     Frequent User     ZIP
+#54eb068de71f393530a9a74d    54eb0737e71f394c2fa9a74d    1424692504    Mon, 23 Feb 2015 11:55:04 GMT    0    0    urban bicycle    M    1987    Developer    no    
+#54eb9374e71f39f02fa9a750    5505cb04e71f39542e25e2d4    1426442994    Sun, 15 Mar 2015 18:09:54 GMT    0    0.7    urban bicycle    M    1974    Worker    yes    40128
 
 
 #TripID, TimeStamp,Date, Latitude, Longitude, Altitude, Distance, Speed, Type
@@ -248,55 +300,7 @@ def calc_seconds(   t_data,
     else:
         return -1
     
-def find_longest_common_sequence_index(a,b):
-    """
-    Longest common sequence
-    returns list indexes ia, ib and length n such that
-        The longest sequence in list a is a[ia: ia + n]
-        The longest sequence in list b is b[ib: ib + n]
-    
-    """
-    # Email   : hipersayan DOT x AT gmail DOT com
-    # Web-Site: http://hipersayanx.blogspot.com/
-    ja = -1
-    jb = -1
-    n = 0
- 
-    if a == [] or b == []:
-        return ja, jb, n
- 
-    l = len(a) + len(b) - 1
-    ia = len(a) - 1
-    ib = 0
-    s = 1
- 
-    for k in range(l):
-        nCur = 0
- 
-        for r in range(s):
-            if a[ia + r] == b[ib + r]:
-                nCur += 1
- 
-                if nCur > n:
-                    ja = ia + r - nCur + 1
-                    jb = ib + r - nCur + 1
-                    n = nCur
-            else:
-                nCur = 0
- 
-        if k < min(len(a), len(b)) - 1:
-            ia -= 1
-            s += 1
-        elif k > l - min(len(a), len(b)) - 1:
-            ib += 1
-            s -= 1
-        elif ia > 0:
-            ia -= 1
-        else:
-            ib += 1
- 
-    return ja, jb, n
-  
+
   
 def find_longest_common_sequence_index(a,b):
     """
@@ -384,7 +388,7 @@ def get_boundary(coords):
         x_max,y_max = coords[:,:2].max(0)
         
         return [x_min,y_min,x_max,y_max] 
-    
+       
 class OdCreator(Process):
     def __init__(self, ident, mapmatching, logger = None, **kwargs):
         print 'VpCreator.__init__'
@@ -395,31 +399,43 @@ class OdCreator(Process):
                             info ='Creation of the Od demand, trips and routes from the GPS trips.',
                             )      
         attrsman = self.set_attrsman(cm.Attrsman(self))
-        
-
-  
+     
+     
+        self.is_clear_flows = attrsman.add(cm.AttrConf('is_clear_flows', kwargs.get('is_clear_flows',True),
+                                        groupnames = ['options'], 
+                                        name = 'Clear flows', 
+                                        info = 'Clear all the OD flow tables.',
+                                        ))  
+                                        
+        self.is_add_flows = attrsman.add(cm.AttrConf('is_add_flows', kwargs.get('is_add_flows',True),
+                                        groupnames = ['options'], 
+                                        name = 'Add flows', 
+                                        info = 'Add the guessed flows to the flow table.',
+                                        )) 
+      
         self.t_start = attrsman.add(cm.AttrConf('t_start', kwargs.get('t_start',8),
                                         groupnames = ['options'], 
                                         name = 'Starting time of the interval', 
                                         info = 'Begin time of interval in hour (also fractional hour).',
                                         unit = 'h',
                                         )) 
+                                        
         self.t_end = attrsman.add(cm.AttrConf('t_end', kwargs.get('t_end',10),
                                         groupnames = ['options'], 
                                         name = 'Ending time of the interval', 
                                         info = 'End time of interval in hour (also fractional hour).',
                                         unit = 'h',
                                         ))  
+                                        
         self.scale = attrsman.add(cm.AttrConf('scale', kwargs.get('scale',1.0),
                                         groupnames = ['options'], 
                                         name = 'Scale of the od flow', 
                                         info = 'scale parameter to apply to each od flow.',
                                         )) 
                                         
-        mapmatching = self.parent.parent
-        scenario = mapmatching.get_scenario()
+        scenario = self.parent.get_scenario()
         activitytypes = scenario.demand.activitytypes
-        self.ids_activitytype_orig = attrsman.add(cm.AttrConf('ids_activitytype_orig', kwargs.get('activitytypes',activitytypes.names[1]),
+        self.ids_activitytype_orig = attrsman.add(cm.AttrConf('ids_activitytype_orig', kwargs.get('activitytypes',activitytypes.names.get_indexmap()['home']),
                                          groupnames=['options'],
                                          perm='rw',
                                          choices = activitytypes.names.get_indexmap(),
@@ -430,7 +446,7 @@ class OdCreator(Process):
                                          #xmlmap = get_inversemap( activitytypes.names.get_indexmap()),
                                          ))
                                          
-        self.ids_activitytype_dest = attrsman.add(cm.AttrConf('ids_activitytype_dest', kwargs.get('activitytypes',activitytypes.names[2]),
+        self.ids_activitytype_dest = attrsman.add(cm.AttrConf('ids_activitytype_dest', kwargs.get('activitytypes',activitytypes.names.get_indexmap()['work']),
                                          groupnames=['options'],
                                          perm='rw',
                                          choices = activitytypes.names.get_indexmap(),
@@ -442,7 +458,7 @@ class OdCreator(Process):
                                          ))
                                          
         vtypes = scenario.demand.vtypes   
-        self.od_modes = attrsman.add(cm.AttrConf('od_modes', kwargs.get('od_modes','bycicle'),
+        self.od_modes = attrsman.add(cm.AttrConf('od_modes', kwargs.get('od_modes',vtypes.get_modechoices()['bicycle']),
                                      groupnames=['options'],
                                      choices = vtypes.get_modechoices(),
                                      name='vehicle type',
@@ -500,38 +516,45 @@ class OdCreator(Process):
         n_trip = np.sum(od_matrix) 
         print ' number of trips', n_trip
         generated = np.zeros(len(od_matrix[0,:]))
-        attracted  = np.zeros(len(od_matrix[:,0]))    
+        attracted  = np.zeros(len(od_matrix[:,0]))
         
-        OdIntervals.clear_od_trips(scenario.demand.odintervals)
-        i = 0
-        j = 0
-        for zone_orig in ids_zone:
-            for zone_dest in  ids_zone:
-                OdIntervals.add_od_flow( scenario.demand.odintervals, t_start = self.t_start*3600, 
-                                    t_end = self.t_end*3600, id_mode = self.od_modes,
-                                    id_activitytype_orig = self.ids_activitytype_orig, 
-                                    id_activitytype_dest = self.ids_activitytype_dest,
-                                    scale = self.scale,
-                                    name_orig = zones.ids_sumo[zone_orig] , 
-                                    name_dest =  zones.ids_sumo[zone_dest] , 
-                                    tripnumber = od_matrix[i,j])
-                j += 1
+        for i in range(len(ids_zone)):
             generated[i] = np.sum(od_matrix[i,:])
             attracted[i] = np.sum(od_matrix[:,i])
-            i += 1
-            j = 0
             
+        if self.is_clear_flows:
+            OdIntervals.clear_od_trips(scenario.demand.odintervals)
+                
+        if self.is_add_flows:
+            i = 0
+            j = 0
+            for zone_orig in ids_zone:
+                for zone_dest in  ids_zone:
+                    OdIntervals.add_od_flow( scenario.demand.odintervals, t_start = self.t_start*3600, 
+                                        t_end = self.t_end*3600, id_mode = self.od_modes,
+                                        id_activitytype_orig = self.ids_activitytype_orig, 
+                                        id_activitytype_dest = self.ids_activitytype_dest,
+                                        scale = self.scale,
+                                        name_orig = zones.ids_sumo[zone_orig], 
+                                        name_dest =  zones.ids_sumo[zone_dest], 
+                                        tripnumber = od_matrix[i,j])
+                    j += 1
+                i += 1
+                j = 0
+            
+            
+           
         re_allocates = generated - attracted
         print 'generated',generated, 'attracted',attracted, 're_allocates', re_allocates
         print 'od_matrix',od_matrix
         np.savetxt('od_matrix.csv', od_matrix)
 
-        return True
-
-    
-    
+        return od_matrix, generated, attracted, re_allocates                     
+                       
     def get_scenario(self):
-        return self.parent.get_scenario()
+        return self.parent.get_scenario()   
+                       
+       
                                             
                        
 class OdRouteCreator(Process):
@@ -601,7 +624,7 @@ class OdRouteCreator(Process):
         return self.parent.get_scenario()
                                                              
 class VpCreator(Process):
-    def __init__(self, ident, mapmatching, logger = None, **kwargs):
+    def __init__(self, ident='vpcreator', mapmatching=None, logger = None, **kwargs):
         print 'VpCreator.__init__'
         self._init_common(  ident, 
                             parent = mapmatching,
@@ -614,8 +637,8 @@ class VpCreator(Process):
         self.scale = attrsman.add(cm.AttrConf( 'scale',kwargs.get('scale',1.0),
                             groupnames = ['options'], 
                             perm='rw', 
-                            name = 'Trips_scale', 
-                            info = 'All trips are considered -scale- times.',
+                            name = 'Pop scale', 
+                            info = 'Scale gives the number of persons created for each GPS person or trip, dependent on the Creation method.',
                             ))
         self.mean_radius = attrsman.add(cm.AttrConf( 'mean_radius',kwargs.get('mean_radius',100.0),
                             groupnames = ['options'], 
@@ -634,20 +657,21 @@ class VpCreator(Process):
         mapmatching = self.parent.parent
         scenario = mapmatching.get_scenario()
         activitytypes = scenario.demand.activitytypes     
-        self.ids_activitytype_orig = attrsman.add(cm.AttrConf('ids_activitytype_orig', kwargs.get('activitytypes',activitytypes.names[3]),
+        activitychoices =  activitytypes.names.get_indexmap()
+        self.ids_activitytype_orig = attrsman.add(cm.AttrConf('ids_activitytype_orig', activitychoices[kwargs.get('activitytype_orig','home')],
                                          groupnames=['options'],
                                          perm='rw',
-                                         choices = activitytypes.names.get_indexmap(),
+                                         choices = activitychoices,
                                          name='Activity type at orig.',
                                          symbol='Act. orig.',
                                          info='Type of activity performed at the origin, before the trip.',
                                          #xmltag = 'actType',
                                          #xmlmap = get_inversemap( activitytypes.names.get_indexmap()),
                                          ))
-        self.ids_activitytype_dest = attrsman.add(cm.AttrConf('ids_activitytype_dest', kwargs.get('activitytypes',activitytypes.names[2]),
+        self.ids_activitytype_dest = attrsman.add(cm.AttrConf('ids_activitytype_dest', activitychoices[kwargs.get('activitytype_dest','work')],
                                          groupnames=['options'],
                                          perm='rw',
-                                         choices = activitytypes.names.get_indexmap(),
+                                         choices = activitychoices,
                                          name='Activity type at dest.',
                                          symbol='Act. dest.',
                                          info='Type of activity performed at the destination, after the trip.',
@@ -655,14 +679,17 @@ class VpCreator(Process):
                                          #xmlmap = get_inversemap( activitytypes.names.get_indexmap()),
                                          ))
         self.is_first_method = attrsman.add(cm.AttrConf( 'is_first_method',kwargs.get('is_first_method',True),
+                                                         choices = {'1 virtual person per recorded trip': True, '1 virtual person for each person in person DB': False},
                                                          groupnames = ['options'],
-                                                         name = 'VpCreator Selection Method',
-                                                         info = 'If it is True: use first method (1 person each recorded trip). If it is False: use second method (1 person each 1 person that recorded a trip)',
+                                                         name = 'Creation method',
+                                                         info = 'If True use first method (1 person for each recorded trip). Otherwise use second method (1 person for each person who recorded at least one trip)',
                                                          ))
         strategies = scenario.demand.virtualpop.get_strategies()
         strategychoices = {'all':-1}
+
+        
         strategychoices.update(strategies.names.get_indexmap())
-        self.id_strategy = attrsman.add(cm.AttrConf( 'id_strategy',strategies.names[2],
+        self.id_strategy = attrsman.add(cm.AttrConf( 'id_strategy',strategychoices[kwargs.get('strategy','bike')],
                                                      groupnames = ['options'],
                                                      choices = strategychoices,
                                                      perm='rw',
@@ -688,12 +715,65 @@ class VpCreator(Process):
                             name = 'Time interval end', 
                             info = 'Time interval end for plans generation from GPS traces',
                             ))
-        self.is_delete_existing_pop = attrsman.add(cm.AttrConf( 'is_delete_existing_pop',kwargs.get('is_delete_existing_pop',True),
+                            
+        self.is_delete_existing_pop = attrsman.add(cm.AttrConf( 'is_delete_existing_pop',kwargs.get('is_delete_existing_pop',False),
                                     groupnames = ['options'],
                                     name = 'Delete existing Virtual Population',
                                     info = 'If it is True: Delete existing virtual population. If it is False: keep existing virtual population',
                                     ))
-        
+                                    
+        self.is_update_bike_vtypes = attrsman.add(cm.AttrConf( 'is_update_bike_vtypes',kwargs.get('is_update_bike_vtypes',False),
+                                    groupnames = ['options'],
+                                    name = 'update ibike vtypes',
+                                    info = 'Update the ibike vtypes based on age and gender of cyclists',
+                                    ))
+                                    
+        self.year_database = attrsman.add(cm.AttrConf( 'year_database',kwargs.get('year_database',2017),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            unit = '',
+                            name = 'Database year', 
+                            info = 'year of the database',
+                            ))
+                            
+        self.age_treshold = attrsman.add(cm.AttrConf( 'age_treshold',kwargs.get('age_treshold',40),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            unit = '',
+                            name = 'Treshold age', 
+                            info = 'Treshold between young and old cyclists: this number is included with youngs',
+                            ))
+                            
+        vtypechoices = scenario.demand.get_vtypes().ids_sumo.get_indexmap()
+
+        self.male_young = attrsman.add(cm.AttrConf( 'male_young',vtypechoices['bicycle'],
+                                                     groupnames = ['options'],
+                                                     choices = vtypechoices,
+                                                     perm='rw',
+                                                     name = 'Vtype young males',
+                                                     info = 'ID Vtype for young males.',
+                                                     ))
+        self.male_old = attrsman.add(cm.AttrConf( 'male_old',vtypechoices['bicycle'],
+                                                     groupnames = ['options'],
+                                                     choices = vtypechoices,
+                                                     perm='rw',
+                                                     name = 'Vtype old males',
+                                                     info = 'ID Vtype for old males.',
+                                                     ))                                                     
+        self.female_young = attrsman.add(cm.AttrConf( 'female_young',vtypechoices['bicycle'],
+                                                     groupnames = ['options'],
+                                                     choices = vtypechoices,
+                                                     perm='rw',
+                                                     name = 'Vtype young females',
+                                                     info = 'ID Vtype for young females.',
+                                                     ))
+        self.female_old = attrsman.add(cm.AttrConf( 'female_old',vtypechoices['bicycle'],
+                                                     groupnames = ['options'],
+                                                     choices = vtypechoices,
+                                                     perm='rw',
+                                                     name = 'Vtype old females',
+                                                     info = 'ID Vtype for old females.',
+                                                     ))
         
                                                            
     def do(self):
@@ -704,6 +784,10 @@ class VpCreator(Process):
         demand = scenario.demand
         net = scenario.net
         virtualpop =  scenario.demand.virtualpop
+        strategies = virtualpop.get_strategies()
+        modes = net.modes
+        
+        
         if self.is_delete_existing_pop == True:
             virtualpop.clear_population()
             virtualpop.activities.clear()
@@ -734,25 +818,25 @@ class VpCreator(Process):
         #select strategy
         if self.is_first_method == True:
             if self.id_strategy == -1:
-                ids_trip_bike = ids_trip[(ids_mode == 2)]
-                ids_trip_bus = ids_trip[(ids_mode == 5)]
-                ids_trip_ped = ids_trip[(ids_mode == 1)]
+                ids_trip_bike = ids_trip[(ids_mode == modes.get_id_from_formatted('bicycle'))]
+                ids_trip_bus = ids_trip[(ids_mode == modes.get_id_from_formatted('bus'))]
+                ids_trip_ped = ids_trip[(ids_mode == modes.get_id_from_formatted('pedestrian'))]
                 n_pers = len(ids_trip_bike)+len(ids_trip_bus)+len(ids_trip_ped)
                 ids_trip = ids_trip_bike
                 ids_trip = np.append(ids_trip,ids_trip_bus)
                 ids_trip = np.append(ids_trip,ids_trip_ped)
                 print 'ids_trip =',ids_trip
                 # ids_trip = ids_trip_bike + ids_trip_ped + ids_trip_bus
-            if self.id_strategy == 1:
-                ids_trip_ped = ids_trip[(ids_mode == 1)]
+            if self.id_strategy == strategies.get_id_from_formatted('walk'):
+                ids_trip_ped = ids_trip[(ids_mode == modes.get_id_from_formatted('pedestrian'))]
                 n_pers = len(ids_trip_ped)
                 ids_trip = ids_trip_ped
-            if self.id_strategy == 2:
-                ids_trip_bus = ids_trip[(ids_mode == 5)]
+            if self.id_strategy == strategies.get_id_from_formatted('transit'):
+                ids_trip_bus = ids_trip[(ids_mode == modes.get_id_from_formatted('bus'))]
                 n_pers = len(ids_trip_bus)
                 ids_trip = ids_trip_bus
-            if self.id_strategy == 4:
-                ids_trip_bike = ids_trip[(ids_mode == 2)]
+            if self.id_strategy == strategies.get_id_from_formatted('bike'):
+                ids_trip_bike = ids_trip[(ids_mode == modes.get_id_from_formatted('bicycle'))]
                 n_pers = len(ids_trip_bike)
                 ids_trip = ids_trip_bike
             
@@ -761,9 +845,9 @@ class VpCreator(Process):
 
         if self.is_first_method == False:
             if self.id_strategy == -1:
-                ids_trip_bike = ids_trip[(ids_mode == 2)]
-                ids_trip_bus = ids_trip[(ids_mode == 5)]
-                ids_trip_ped = ids_trip[(ids_mode == 1)]
+                ids_trip_bike = ids_trip[(ids_mode == modes.get_id_from_formatted('bicycle'))]
+                ids_trip_bus = ids_trip[(ids_mode == modes.get_id_from_formatted('bus'))]
+                ids_trip_ped = ids_trip[(ids_mode == modes.get_id_from_formatted('pedestrian'))]
                 n_trips_for_scale = len(ids_trip_bike)+len(ids_trip_bus)+len(ids_trip_ped)
                 
                 ids_pers_bike = trips.ids_person[ids_trip_bike]
@@ -780,20 +864,20 @@ class VpCreator(Process):
                 #ids_pers_all = persons.get_ids()
                 #ids_pers = ids_pers_all[(persons.numbers_tot_trip_gps[ids_pers_all]>0)]
                 n_pers = len(ids_pers)
-            if self.id_strategy == 1:
-                ids_trip_ped = ids_trip[(ids_mode == 1)]
+            if self.id_strategy == strategies.get_id_from_formatted('walk'):
+                ids_trip_ped = ids_trip[(ids_mode == modes.get_id_from_formatted('pedestrian'))]
                 n_trips_for_scale = len(ids_trip_ped)
                 ids_pers_ped = trips.ids_person[ids_trip_ped]
                 ids_pers = np.unique(ids_pers_ped)
                 n_pers = len(ids_pers)
-            if self.id_strategy == 2:
-                ids_trip_bus = ids_trip[(ids_mode == 5)]
+            if self.id_strategy == strategies.get_id_from_formatted('transit'):
+                ids_trip_bus = ids_trip[(ids_mode == modes.get_id_from_formatted('bus'))]
                 n_trips_for_scale = len(ids_trip_bus)
                 ids_pers_bus = trips.ids_person[ids_trip_bus]
                 ids_pers = np.unique(ids_pers_bus)
                 n_pers = len(ids_pers)
-            if self.id_strategy == 4:
-                ids_trip_bike = ids_trip[(ids_mode == 2)]
+            if self.id_strategy == strategies.get_id_from_formatted('bike'):
+                ids_trip_bike = ids_trip[(ids_mode == modes.get_id_from_formatted('bicycle'))]
                 n_trips_for_scale = len(ids_trip_bike)
                 ids_pers_bike = trips.ids_person[ids_trip_bike]
                 ids_pers = np.unique(ids_pers_bike)
@@ -801,14 +885,10 @@ class VpCreator(Process):
                 
                 
         
-           
         for step in range(int(self.scale + 1.0)):
             count = step
             difference = float(self.scale - count)
-            print 'count = ',count
-            print 'max range = ',max(range(int(self.scale + 1.0))) 
-            print 'difference = ',float(self.scale-count)
-            print 'n_pers = ',n_pers
+
             # if the scale parameter isn't an integer number than do this
             if count == max(range(int(self.scale + 1.0))) and difference != 0.0:
                                 
@@ -833,15 +913,15 @@ class VpCreator(Process):
                             ids_trip_ped.sort()
                             ids_trip = np.append(ids_trip,ids_trip_ped)                        
                             # ids_trip = ids_trip_bike + ids_trip_ped + ids_trip_bus
-                    if self.id_strategy == 1:
+                    if self.id_strategy == strategies.get_id_from_formatted('walk'):
                         ids_trip_ped = np.random.choice(ids_trip_ped, n_pers, replace = False)
                         ids_trip_ped.sort()
                         ids_trip = ids_trip_ped
-                    if self.id_strategy == 2:
+                    if self.id_strategy == strategies.get_id_from_formatted('transit'):
                         ids_trip_bus = np.random.choice(ids_trip_bus, n_pers, replace = False)
                         ids_trip_bus.sort()
                         ids_trip = ids_trip_bus
-                    if self.id_strategy == 4:
+                    if self.id_strategy == strategies.get_id_from_formatted('bike'):
                         ids_trip_bike = np.random.choice(ids_trip_bike, n_pers, replace = False)
                         ids_trip_bike.sort()
                         ids_trip = ids_trip_bike
@@ -884,17 +964,17 @@ class VpCreator(Process):
                             ids_pers_ped = np.unique(ids_pers_ped)
                             ids_pers = np.append(ids_pers,ids_pers_ped)
                         ids_pers = np.unique(ids_pers)                        
-                    if self.id_strategy == 1:
+                    if self.id_strategy == strategies.get_id_from_formatted('walk'):
                         ids_trip_ped = np.random.choice(ids_trip_ped, n_trips_tab, replace = False)
                         ids_trip_ped.sort()
                         ids_pers_ped = trips.ids_person[ids_trip_ped]
                         ids_pers = np.unique(ids_pers_ped)
-                    if self.id_strategy == 2:
+                    if self.id_strategy == strategies.get_id_from_formatted('transit'):
                         ids_trip_bus = np.random.choice(ids_trip_bus, n_trips_tab, replace = False)
                         ids_trip_bus.sort()
                         ids_pers_bus = trips.ids_person[ids_trip_bus]
                         ids_pers = np.unique(ids_pers_bus)
-                    if self.id_strategy == 4:
+                    if self.id_strategy == strategies.get_id_from_formatted('bike'):
                         ids_trip_bike = np.random.choice(ids_trip_bike, n_trips_tab, replace = False)
                         ids_trip_bike.sort()
                         ids_pers_bike = trips.ids_person[ids_trip_bike]
@@ -978,7 +1058,7 @@ class VpCreator(Process):
             #Calculate trips departure and arrive times
             print 'Calculate trips departure and arrive times'
 
-            if self.id_strategy == 4 or self.id_strategy == -1:            
+            if self.id_strategy == strategies.get_id_from_formatted('bike') or self.id_strategy == -1:            
                 seconds_departure_bike = np.zeros(len(ids_trip_bike), dtype = np.float32)
                 seconds_arrive_bike = np.zeros(len(ids_trip_bike), dtype = np.float32)
                 duration_for_scale_bike = np.zeros(len(ids_trip_bike), dtype = np.float32)
@@ -1006,16 +1086,16 @@ class VpCreator(Process):
                         seconds_arrive_bike[i] = seconds_departure_bike[i] + duration_for_scale_bike[i]
 
                     i+=1
-                print 'min_seconds_departure_bike: ',min_seconds_departure_bike
-                print 'max_seconds_arrive_bike: ',max_seconds_departure_bike
+                print '  min_seconds_departure_bike: ',min_seconds_departure_bike
+                print '  max_seconds_arrive_bike: ',max_seconds_departure_bike
                 print
-                print 'ids_trip_bike: ',ids_trip_bike
+                print '  ids_trip_bike: ',ids_trip_bike
                 print
-                print 'seconds_departure_bike: ', seconds_departure_bike
+                print '  seconds_departure_bike: ', seconds_departure_bike
                 print
                 
 
-            if self.id_strategy == 2 or self.id_strategy == -1:   
+            if self.id_strategy == strategies.get_id_from_formatted('transit') or self.id_strategy == -1:   
                 seconds_departure_bus = np.zeros(len(ids_trip_bus), dtype = np.float32)
                 seconds_arrive_bus = np.zeros(len(ids_trip_bus), dtype = np.float32)
                 duration_for_scale_bus = np.zeros(len(ids_trip_bus), dtype = np.float32)
@@ -1048,7 +1128,7 @@ class VpCreator(Process):
 
                 print seconds_departure_bus, seconds_arrive_bus
             
-            if self.id_strategy == 1 or self.id_strategy == -1:   
+            if self.id_strategy == strategies.get_id_from_formatted('walk') or self.id_strategy == -1:   
                 seconds_departure_ped = np.zeros(len(ids_trip_ped), dtype = np.float32)
                 seconds_arrive_ped = np.zeros(len(ids_trip_ped), dtype = np.float32)
                 duration_for_scale_ped = np.zeros(len(ids_trip_ped), dtype = np.float32)
@@ -1078,17 +1158,35 @@ class VpCreator(Process):
                         
                     i+=1
 
+
                 print seconds_departure_ped, seconds_arrive_ped
 
 
-            #Vehicle provider
+            # call Vehicle provider to give vehicles to persons
+            # the vehicle according to their preferred mode
             VehicleProvider(\
                         virtualpop = virtualpop,
                         share_autoowner = 0.0,
                         share_motorcycleowner = 0.0,
                         share_bikeowner = 0.0,
                         logger = logger,
-                        ).do()         
+                        ).do()
+            #Update bike vtypes
+
+            if self.is_update_bike_vtypes:
+                for id_ibike in virtualpop.get_ibikes().get_ids():
+                    id_person = virtualpop.get_ibikes().ids_person[id_ibike]
+                    age_person = self.year_database - virtualpop.years_birth[id_person]
+                    gender_person = virtualpop.ids_gender[id_person]
+                    if gender_person == 0 and age_person <= self.age_treshold:
+                        virtualpop.get_ibikes().ids_vtype[id_ibike] = self.male_young
+                    if gender_person == 0 and age_person > self.age_treshold:
+                        virtualpop.get_ibikes().ids_vtype[id_ibike] = self.male_old
+                    if gender_person == 1 and age_person <= self.age_treshold:
+                        virtualpop.get_ibikes().ids_vtype[id_ibike] = self.female_young
+                    if gender_person == 1 and age_person > self.age_treshold:
+                        virtualpop.get_ibikes().ids_vtype[id_ibike] = self.female_old
+                    
     
             #Identify backward and forward edges
             bstar = net.edges.get_bstar()
@@ -1099,7 +1197,7 @@ class VpCreator(Process):
             
             #bus
             print 'Preapare parameters for BUS plans'
-            if self.id_strategy == 2 or self.id_strategy == -1:
+            if self.id_strategy == strategies.get_id_from_formatted('transit') or self.id_strategy == -1:
                 times_from_bus = seconds_departure_bus
                 durations_approx_bus = seconds_arrive_bus - seconds_departure_bus 
             ##            ids_vehicle_bike = virtualpop.ids_ibike[ids_person]
@@ -1126,7 +1224,7 @@ class VpCreator(Process):
                     positions_edge_from_busstop[i]= (scenario.net.ptstops.positions_from[id_fromstop]+scenario.net.ptstops.positions_to[id_fromstop])/2.
                     positions_edge_to_busstop[i]=  (scenario.net.ptstops.positions_from[id_tostop]+scenario.net.ptstops.positions_to[id_tostop])/2.
                     #Find facilities
-                    print 'Find facilities for BUS trips'
+                    #print 'Find facilities for BUS trips'
                     coords_fac_centroids = centroids[ids_facilities]
                     coords_node_origin = points.coords[trips.ids_points[id_trip][0]]
                     coords_node_destination = points.coords[trips.ids_points[id_trip][-1]]
@@ -1153,7 +1251,7 @@ class VpCreator(Process):
             #bike
             print 'Preapare parameters for BIKE plans'
             
-            if self.id_strategy == 4 or self.id_strategy == -1:
+            if self.id_strategy == strategies.get_id_from_formatted('bike') or self.id_strategy == -1:
                 times_from_bike = seconds_departure_bike
                 durations_approx_bike = seconds_arrive_bike - seconds_departure_bike 
 
@@ -1175,13 +1273,14 @@ class VpCreator(Process):
                 ids_route = trips.ids_route_matched[ids_trip_bike]
                 routes_bike = trips.get_routes().ids_edges[ids_route]
                 i=0
+                bstar = net.edges.get_bstar(id_mode = modes.get_id_from_formatted('bicycle'))
+                fstar = net.edges.get_fstar(id_mode = modes.get_id_from_formatted('bicycle'))
                 for id_trip  in ids_trip_bike:
                     ids_edge_from_bike1[i] = np.array(trips.get_routes().ids_edges[trips.ids_route_matched[id_trip]])[0]
                     ids_edge_to_bike1[i] = np.array(trips.get_routes().ids_edges[trips.ids_route_matched[id_trip]])[-1]
-                    bstar = net.edges.get_bstar()
-                    fstar = net.edges.get_fstar()
-                    ids_edge_from_bike[i], positions_edge_from_bike[i], route_from[i] = virtualpop.get_strategies().strategies[4].get_edge_bikeaccess(ids_edge_from_bike1[i], is_get_route = True, is_search_backward = True, is_star = True, bstar = bstar)
-                    ids_edge_to_bike[i],  positions_edge_to_bike[i], route_to[i] = virtualpop.get_strategies().strategies[4].get_edge_bikeaccess(ids_edge_to_bike1[i],is_get_route = True,  is_search_backward = False, is_star = True, fstar = fstar)
+                    
+                    ids_edge_from_bike[i], positions_edge_from_bike[i], route_from[i] = virtualpop.get_strategies().strategies[strategies.get_id_from_formatted('bike')].get_edge_bikeaccess(ids_edge_from_bike1[i], is_get_route = True, is_search_backward = True, is_star = True, bstar = bstar)
+                    ids_edge_to_bike[i],  positions_edge_to_bike[i], route_to[i] = virtualpop.get_strategies().strategies[strategies.get_id_from_formatted('bike')].get_edge_bikeaccess(ids_edge_to_bike1[i],is_get_route = True,  is_search_backward = False, is_star = True, fstar = fstar)
                     routes_bike[i] = route_from[i] + routes_bike.tolist()[i] + route_to[i]
 
                     if ids_edge_from_bike[i] == -1 or ids_edge_to_bike[i] == -1:
@@ -1192,7 +1291,7 @@ class VpCreator(Process):
                         ids_edge_from_bike[i] = ids_edge_from_bike1[i]
                         ids_edge_to_bike[i] = ids_edge_to_bike1[i]
                     #Find facilities
-                    print 'Find facilities for BIKE trips'
+                    #print 'Find facilities for BIKE trips'
                     coords_fac_centroids = centroids[ids_facilities]
                     coords_node_origin = net.nodes.coords[net.edges.ids_fromnode[routes_bike[i][0]]]
                     coords_node_destination = net.nodes.coords[net.edges.ids_fromnode[routes_bike[i][-1]]]
@@ -1219,7 +1318,7 @@ class VpCreator(Process):
             #pedestrian
             print 'Preapare parameters for PEDESTRIAN plans'
             
-            if self.id_strategy == 1 or self.id_strategy == -1:
+            if self.id_strategy == strategies.get_id_from_formatted('walk') or self.id_strategy == -1:
                 times_from_ped = seconds_departure_ped
                 durations_approx_ped = seconds_arrive_ped - seconds_departure_ped 
             ##            ids_vehicle_bike = virtualpop.ids_ibike[ids_person]
@@ -1230,7 +1329,7 @@ class VpCreator(Process):
                 i=0
                 for id_trip  in ids_trip_ped:
                     #Find facilities
-                    print 'Find facilities for PEDESTRIAN trips'
+                    #print 'Find facilities for PEDESTRIAN trips'
                     coords_fac_centroids = centroids[ids_facilities]
                     coords_node_origin = points.coords[trips.ids_points[id_trip][0]]
                     coords_node_destination = points.coords[trips.ids_points[id_trip][-1]]
@@ -1248,31 +1347,31 @@ class VpCreator(Process):
                     i+=1
                     
 ###########################################      
-            strategies = []
+            available_strategies = []
             if len(ids_trip_ped)>0:
-                strategies.append(1)
+                available_strategies.append(strategies.get_id_from_formatted('walk'))
             if len(ids_trip_bike)>0:
-                strategies.append(4)
+                available_strategies.append(strategies.get_id_from_formatted('bike'))
             if len(ids_trip_bus)>0:
-                strategies.append(2)  
+                available_strategies.append(strategies.get_id_from_formatted('transit'))  
                 
-            for strategy in strategies:
+            for strategy in available_strategies:
                 print 'init strategy', strategy
     
                 
-                if strategy == 4:
+                if strategy == strategies.get_id_from_formatted('bike'):
                     ids_fac_from = ids_fac_from_bike
                     ids_fac_to = ids_fac_to_bike
                     seconds_departure = seconds_departure_bike
                     seconds_arrive = seconds_arrive_bike
                     ids_trip = ids_trip_bike
-                if strategy == 2:
+                if strategy == strategies.get_id_from_formatted('transit'):
                     ids_fac_from = ids_fac_from_bus
                     ids_fac_to = ids_fac_to_bus
                     seconds_departure = seconds_departure_bus
                     seconds_arrive = seconds_arrive_bus
                     ids_trip = ids_trip_bus
-                if strategy == 1:
+                if strategy == strategies.get_id_from_formatted('walk'):
                     ids_fac_from = ids_fac_from_ped
                     ids_fac_to = ids_fac_to_ped
                     seconds_departure = seconds_departure_ped
@@ -1292,20 +1391,20 @@ class VpCreator(Process):
                 ids_edge_from_walk1 =  facilities.ids_roadedge_closest[ids_fac_from]
                 positions_edge_from_walk1 = facilities.positions_roadedge_closest[ids_fac_from]
                 times_from_walk1 = seconds_departure
-                if strategy == 4:
+                if strategy == strategies.get_id_from_formatted('bike'):
                     positions_edge_to_walk1 = positions_edge_from_bike
                     ids_edge_to_walk1 = ids_edge_from_bike
-                if strategy == 2:
+                if strategy == strategies.get_id_from_formatted('transit'):
                     positions_edge_to_walk1 = positions_edge_from_busstop
                     ids_edge_to_walk1 = ids_edge_from_busstop
                 
                 
                     
                 #for pedestrian
-                if strategy == 1:
+                if strategy == strategies.get_id_from_formatted('walk'):
                     positions_edge_to_walk1 = facilities.positions_roadedge_closest[ids_fac_to]
                     ids_edge_to_walk1 = facilities.ids_roadedge_closest[ids_fac_to]
-                if strategy == 2 or strategy == 4:
+                if strategy == strategies.get_id_from_formatted('transit') or strategy == strategies.get_id_from_formatted('bike'):
                     #walk2
                     print 'Prepare parameters for Walk2'
         
@@ -1313,10 +1412,10 @@ class VpCreator(Process):
             
                     ids_edge_to_walk2 = facilities.ids_roadedge_closest[ids_fac_to]
                     positions_edge_to_walk2 = facilities.positions_roadedge_closest[ids_fac_to]
-                    if strategy == 4:
+                    if strategy == strategies.get_id_from_formatted('bike'):
                         ids_edge_from_walk2 = ids_edge_to_bike
                         positions_edge_from_walk2 = positions_edge_to_bike
-                    if strategy == 2:
+                    if strategy == strategies.get_id_from_formatted('transit'):
                         ids_edge_from_walk2 = ids_edge_to_busstop
                         positions_edge_from_walk2 = positions_edge_to_busstop
                 
@@ -1388,9 +1487,9 @@ class VpCreator(Process):
 
                 #Create plans
                 print 'Create plans'
-                if strategy == 2 or strategy ==4:
+                if strategy == strategies.get_id_from_formatted('transit') or strategy ==strategies.get_id_from_formatted('bike'):
                     ids_plan = virtualpop.add_plans(ids_person, strategy)
-                elif strategy == 1:
+                elif strategy == strategies.get_id_from_formatted('walk'):
                     ids_plan = virtualpop.add_plans(ids_person, 5)
 
             strat_for_stages = strategy
@@ -1401,12 +1500,12 @@ class VpCreator(Process):
             print 'Add activity stages'
         
             for id_plan,\
-            	id_act_from,\
-            	name_acttype_from,\
-            	duration_act_from,\
-            	id_edge_from,\
-            	pos_edge_from,\
-            	time_from in\
+                id_act_from,\
+                name_acttype_from,\
+                duration_act_from,\
+                id_edge_from,\
+                pos_edge_from,\
+                time_from in\
                  zip(ids_plan,\
                      ids_activity_from,\
                      names_acttype_from,\
@@ -1504,14 +1603,14 @@ class VpCreator(Process):
                         durations_walk1[i] = virtualpop.get_plans().get_stagetable('walks').durations[ids_walk1[i]]
                 print seconds_departure, durations_walk1
                 
-                if strategy ==4:
+                if strategy ==strategies.get_id_from_formatted('bike'):
                     #bike
                     times_from_bike = seconds_departure + durations_walk1
-                if strategy ==2:
+                if strategy ==strategies.get_id_from_formatted('transit'):
                     #bus
                     times_from_bus = seconds_departure + durations_walk1
 
-            if strat_for_stages == 4:
+            if strat_for_stages == strategies.get_id_from_formatted('bike'):
                 #Add bikeride stages
                 print 'Add bikeride stages'
                 ##        virtualpop.get_plans().get_stagetable('bikeride').prepare_planning()
@@ -1554,7 +1653,7 @@ class VpCreator(Process):
                                 route = route, 
                                 duration_approx = duration_approx)
 
-            if strat_for_stages == 2:
+            if strat_for_stages == strategies.get_id_from_formatted('transit'):
 
                 #Add bus stages
                 print 'Add bus stages'
@@ -1652,9 +1751,9 @@ class VpCreator(Process):
             if self.is_first_method == True:
                 ids_walk2 = np.zeros(len(ids_trip), dtype = np.int32)
                 times_end_walk2 = np.zeros(len(ids_trip), dtype = np.int32)
-                if self.id_strategy ==4:
+                if self.id_strategy ==strategies.get_id_from_formatted('walk'):
                     times_from_walk2 += durations_walk1
-                if self.id_strategy ==2:
+                if self.id_strategy ==strategies.get_id_from_formatted('transit'):
                     times_from_walk2 = times_from_bus
                     
                 for id_plan,\
@@ -1684,12 +1783,12 @@ class VpCreator(Process):
                                                     position_edge_to = position_edge_to,
                                                     )
             elif self.is_first_method == False:
-                if strategy == 2 or strategy == 4:
+                if strategy == strategies.get_id_from_formatted('transit') or strategy == strategies.get_id_from_formatted('bike'):
                     ids_walk2 = np.zeros(len(ids_trip), dtype = np.int32)
                     times_end_walk2 = np.zeros(len(ids_trip), dtype = np.int32)
-                    if strategy ==4:
+                    if strategy ==strategies.get_id_from_formatted('bike'):
                         times_from_walk2 += durations_walk1 
-                    if strategy ==2:
+                    if strategy ==strategies.get_id_from_formatted('transit'):
                         times_from_walk2 = times_from_bus
                         
                     for id_plan,\
@@ -1723,11 +1822,11 @@ class VpCreator(Process):
 
             durations_walk2 = np.zeros(len(ids_trip), dtype = np.float32)
             for time_end,  second_arrive, i, duration_walk_1 in zip(times_end_walk2, seconds_arrive, range(len(ids_trip)),durations_walk1):
-                if strat_for_stages ==4:
+                if strat_for_stages ==strategies.get_id_from_formatted('bike'):
                     if time_end !=0:
                         durations_walk2[i] = virtualpop.get_plans().get_stagetable('walks').durations[ids_walk2[i]]
                     times_from_act2+= (durations_walk2+durations_walk1)
-                if strat_for_stages ==2:
+                if strat_for_stages ==strategies.get_id_from_formatted('transit'):
                     durations_walk2 = times_end_walk2-times_from_bus
                     times_from_act2 = times_from_bus + durations_walk2+ durations_walk1
             print 'durations_walk1',durations_walk1,'durations_walk2',durations_walk2, 'seconds_arrive', seconds_arrive, 'seconds_departure', seconds_departure
@@ -1765,12 +1864,12 @@ class VpCreator(Process):
                 plans.times_end[ids_plan] = seconds_arrive + durations_walk2 + durations_walk1
                 plans.times_est[ids_plan] = seconds_arrive + durations_walk2 + durations_walk1 - seconds_departure
             elif self.is_first_method == False:
-                if strategy ==2 or strategy == 4:
+                if strategy ==strategies.get_id_from_formatted('transit') or strategy ==  strategies.get_id_from_formatted('bike'):
                     plans = virtualpop.get_plans()
                     plans.times_begin[ids_plan] = seconds_departure 
                     plans.times_end[ids_plan] = seconds_arrive + durations_walk2 + durations_walk1
                     plans.times_est[ids_plan] = seconds_arrive + durations_walk2 + durations_walk1 - seconds_departure
-                elif strategy ==1:
+                elif strategy ==strategies.get_id_from_formatted('walk'):
                     plans = virtualpop.get_plans()
                     plans.times_begin[ids_plan] = seconds_departure 
                     plans.times_end[ids_plan] = seconds_arrive +  durations_walk1
@@ -1781,14 +1880,14 @@ class VpCreator(Process):
         return self.parent.get_scenario()
                                                                                         
 class BirgilMatcher(Process):
-    def __init__(self, ident, mapmatching,  logger = None, **kwargs):
+    def __init__(self, ident = 'birgilmatcher', parent = None,  logger = None, **kwargs):
         print 'BirgilMatcher.__init__'
         
         # TODO: let this be independent, link to it or child??
        
         
         self._init_common(  ident, 
-                            parent = mapmatching,
+                            parent = parent,
                             name = 'Birgillito Map matching', 
                             logger = logger,
                             info ='Birgillito Map matching.',
@@ -1816,15 +1915,15 @@ class BirgilMatcher(Process):
                                 """,
                             ))
         
-        self.dist_backmove = attrsman.add(cm.AttrConf( 'dist_backmove',kwargs.get('dist_backmove',999999.0),
-                            groupnames = ['options'], 
-                            perm='rw', 
-                            name = 'Back move dist', 
-                            unit = 'm',
-                            info = """Distance to detect whether a points is moving backward on an edge.
-                                This may be dye to a false projection and the point will be considered outside the edge.
-                                """,
-                            ))
+        #self.dist_backmove = attrsman.add(cm.AttrConf( 'dist_backmove',kwargs.get('dist_backmove',999999.0),
+        #                    groupnames = ['options'], 
+        #                    perm='rw', 
+        #                    name = 'Back move dist', 
+        #                    unit = 'm',
+        #                    info = """Distance to detect whether a points is moving backward on an edge.
+        #                        This may be dye to a false projection and the point will be considered outside the edge.
+        #                        """,
+        #                    ))
                             
         self.n_points_min = attrsman.add(cm.AttrConf( 'n_points_min',kwargs.get('n_points_min',5),
                             groupnames = ['options'], 
@@ -1889,7 +1988,7 @@ class BirgilMatcher(Process):
         self.is_ignor_connections = attrsman.add(cm.AttrConf( 'is_ignor_connections',kwargs.get('is_ignor_connections',True),
                             groupnames = ['options'], 
                             name = 'Ignore connections', 
-                            info = 'Ignore connections during the route reconstruction. This option should be disableled if routes are the bases for successive simulations.',
+                            info = 'Ignore connections during the route reconstruction. This option should be disabeled if routes are the bases for successive simulations.',
                             ))
         
         self.n_targetedge_route = attrsman.add(cm.AttrConf( 'n_targetedge_route',kwargs.get('n_targetedge_route',5),
@@ -1930,9 +2029,6 @@ class BirgilMatcher(Process):
         id_mode_ped = self.get_net().modes.get_id_mode('pedestrian')
         vtypes = self.parent.get_scenario().demand.vtypes
         
-        fstar = edges.get_fstar(is_return_arrays = True, is_ignor_connections = self.is_ignor_connections)
-        #bstar = edges.get_bstar(is_return_arrays = True, is_ignor_connections = True)
-        #times = edges.get_times(id_mode = 2, is_check_lanes = False, speed_max = 5.555)
         ids_trip = trips.get_ids_selected()
         
         ids_mode = vtypes.ids_mode[trips.ids_vtype[ids_trip]]
@@ -1944,6 +2040,7 @@ class BirgilMatcher(Process):
         
         distancesmap = self.parent.get_distancesmap(is_check_lanes = True)
         accesslevelsmap = self.parent.get_accesslevelsmap()
+        fstarmap = self.parent.get_fstarmap(is_return_arrays = True, is_ignor_connections = self.is_ignor_connections)
         
         n_trip_matched = 0
         time_match_trace_av = 3.0 # initial guess of match time
@@ -1952,41 +2049,48 @@ class BirgilMatcher(Process):
         for id_trip, ids_point, id_mode in zip(ids_trip, trips.ids_points[ids_trip], ids_mode):
             tick_before = time.time()
             logger.w('Analyzing Trip %d...'%id_trip) 
-            if distancesmap.has_key(id_mode) & (id_mode != id_mode_ped) & (len(ids_point)>=2):
-                
-                
-                are_valid = distancesmap[id_mode] > self.dist_min_modespecific
-                
-                #print '  weights[26216]',distancesmap[id_mode][26216],accesslevelsmap[id_mode][26216]
-                #print '  weights[26217]',distancesmap[id_mode][26217],accesslevelsmap[id_mode][26217]
-
-                # call conventional monodirectional matcher
-                #########DELETED PRINT
-                #print '  call matcher for trip',id_trip,'mode',id_mode
-                
-                #print '  len(are_valid)',len(are_valid),len(ids_edge)
-                route, length_route, length_route_mixed,length_route_exclusive, duration_gps, lengthindex,err_dist, t_match, ids_point_edgeend ,is_connected = \
-                            self.match_trip_birgil(id_trip, ids_point, fstar, 
-                                                    distancesmap[id_mode] - self.dist_modespecific * are_valid * accesslevelsmap[id_mode], 
-                                                    accesslevelsmap[id_mode])
-                        
-                                    
-                trips.set_matched_route(    id_trip, route, 
-                                            length_route,  
-                                            length_route_mixed,
-                                            length_route_exclusive,
-                                            duration_gps, 
-                                            lengthindex,
-                                            err_dist, 
-                                            t_match,
-                                            is_connected = is_connected,
-                                            ids_point_edgeend = ids_point_edgeend,
-                                            color = self.color_route,
-                                            )
+            if ids_point is not None:
+                if distancesmap.has_key(id_mode) & (id_mode != id_mode_ped) & (len(ids_point)>=2):
+                    
+                    
+                    are_valid = distancesmap[id_mode] > self.dist_min_modespecific
+                    
+                    #print '  weights[26216]',distancesmap[id_mode][26216],accesslevelsmap[id_mode][26216]
+                    #print '  weights[26217]',distancesmap[id_mode][26217],accesslevelsmap[id_mode][26217]
+    
+                    # call conventional monodirectional matcher
+                    #########DELETED PRINT
+                    #print '  call matcher for trip',id_trip,'mode',id_mode
+                    
+                    #print '  len(are_valid)',len(are_valid),len(ids_edge)
+                    route, length_route, length_route_mixed,length_route_exclusive, length_route_contrary, duration_gps, lengthindex,err_dist, t_match, ids_point_edgeend ,is_connected = \
+                                self.match_trip_birgil(id_trip, ids_point, 
+                                                        fstarmap[id_mode], 
+                                                        distancesmap[id_mode] - self.dist_modespecific * are_valid * accesslevelsmap[id_mode], 
+                                                        accesslevelsmap[id_mode])
+                            
+                                        
+                    trips.set_matched_route(    id_trip, route, 
+                                                length_route,  
+                                                length_route_mixed,
+                                                length_route_exclusive,
+                                                length_route_contrary,
+                                                duration_gps, 
+                                                lengthindex,
+                                                err_dist, 
+                                                t_match,
+                                                is_connected = is_connected,
+                                                ids_point_edgeend = ids_point_edgeend,
+                                                color = self.color_route,
+                                                )
+                else:
+                    logger.w("  Failed id_trip %d because pedestrian mode or id_mode %d does not occured in network"%(id_trip,id_mode)) 
+                    print '  distancesmap.keys()',distancesmap.keys()
+                    
             else:
-                logger.w("  Failed id_trip %d because pedestrian mode or id_mode %d does not occur in network"%(id_trip,id_mode)) 
-                print '  distancesmap.keys()',distancesmap.keys()
-            
+                logger.w("  Failed id_trip %d because no points"%(id_trip)) 
+                print '  ids_point',ids_point
+                
             n_trip_matched += 1
             
             time_match_trace =  time.time()-tick_before
@@ -2133,7 +2237,7 @@ class BirgilMatcher(Process):
         if (ind_point_initial<0)|(ind_point_final<0) | (n_points_eff < self.n_points_min):
             #########DELETED PRINT
             #print 'ABOARD: insufficient valid points' 
-            return [], 0.0, 0.0,-1.0,-1.0, -1.0, -1.0, 0.0, [], False
+            return [], 0.0, 0.0,-1.0,-1.0,-1.0, -1.0, -1.0, 0.0, [], False
         
         # print '  coords',coords
         # create initial routeset
@@ -2227,7 +2331,7 @@ class BirgilMatcher(Process):
                 #print '        ids_edge',ids_edge
                 #print '        ids_point_edgeend',ids_point_edgeend
                 #if length_partial > self.alpha * length_edge:
-                if (np.isnan(dist_point_edge))|(dist_point_edge >self.width_buffer_max )|((weights[id_edge_last]>self.dist_backmove)& (pos-length_partial<self.dist_backmove)): 
+                if (np.isnan(dist_point_edge))|(dist_point_edge >self.width_buffer_max ):#|((weights[id_edge_last]>self.dist_backmove)& (pos-length_partial<self.dist_backmove)): 
                     # point is beyond edge
                     
                     
@@ -2235,11 +2339,15 @@ class BirgilMatcher(Process):
                     length_partial = 0
                     
                     # get FSTAR
-                    #print '        fstar',id_edge_last,fstar[id_edge_last]
+                    #print '        id_edge_last,',id_edge_last,' fstar',fstar[id_edge_last]
                     ids_edge_next_all = fstar[id_edge_last]
                     
                     # filter allowed edges, by verifying positivness of
                     # travel costs # need access levels, costs is negative if no access??
+                    #print '    ids_edge_next_all',ids_edge_next_all
+                    #print '    weights[ids_edge_next_all]',weights[ids_edge_next_all]
+                    #print '    accesslevels[ids_edge_next_all]',accesslevels[ids_edge_next_all]
+                    
                     ids_edge_next = ids_edge_next_all[ (weights[ids_edge_next_all]>=0) & (accesslevels[ids_edge_next_all]>=0) ]
                     #########DELETED PRINT
                     #print '        parse ids_edge_next',ids_edge_next
@@ -2375,7 +2483,7 @@ class BirgilMatcher(Process):
         if len(route) == 0:
             #########DELETED PRINT
             #print 'ABOARD: route contains no edges ids_edge=',ids_edge
-            return [], 0.0, 0.0,-1.0,-1.0, -1.0, -1.0, 0.0, [], False
+            return [], 0.0, 0.0,-1.0,-1.0,-1.0, -1.0, -1.0, 0.0, [], False
         
         length_gps = np.sum(np.sqrt(np.sum((coords[ind_point_initial+1:ind_point_final]-coords[ind_point_initial:ind_point_final-1])**2,1)))
                      
@@ -2383,13 +2491,16 @@ class BirgilMatcher(Process):
         
         length_route_mixed = 0.0
         length_route_exclusive = 0.0
+        length_route_contrary = 0.0
         for id_edge, length in zip(ids_edge,weights[ids_edge]):
             accesslevel = accesslevels[id_edge]
-            if accesslevel ==1:
+            if self.parent.get_scenario().net.lanes.get_accesslevel_bikecontrary_special(id_lane = self.parent.get_scenario().net.edges.ids_lanes[id_edge][0]) == -2:
+                length_route_contrary += length
+            elif accesslevel ==1:
                 length_route_mixed += length
             elif accesslevel ==2:
                 length_route_exclusive += length
-            
+
         if length_gps>0:
             lengthindex = length_route/length_gps
         else:
@@ -2440,7 +2551,7 @@ class BirgilMatcher(Process):
         #print '  check',(lengthindex<self.lengthindex_max),(lengthindex >= self.lengthindex_min),(duration_gps>self.duration_min),(length_route>self.dist_min),(len(route)>0)
         #print '   twice',(lengthindex<self.lengthindex_max)&(lengthindex >= self.lengthindex_min)&(duration_gps>self.duration_min)&(length_route>self.dist_min)&(len(route)>0)                    
         
-        return route, length_route, length_route_mixed,length_route_exclusive, duration_gps, lengthindex, err_dist, t_match,ids_point_edgeend ,is_connected
+        return route, length_route, length_route_mixed,length_route_exclusive, length_route_contrary, duration_gps, lengthindex, err_dist, t_match,ids_point_edgeend ,is_connected
     
                 
     
@@ -2804,7 +2915,7 @@ class PTMatcher(BirgilMatcher):
         demand = scenario.demand
         ptlines = demand.ptlines
         ptlinks = ptlines.get_ptlinks()
-        
+        mapmatching = self.parent
 
         net = scenario.net
         edges = net.edges
@@ -2824,9 +2935,11 @@ class PTMatcher(BirgilMatcher):
         id_mode_bus = net.modes.get_id_mode('bus')
         vtypes = demand.vtypes
         accesslevels_bus = edges.get_accesslevels(id_mode_bus)
+        
         busdistances = edges.get_distances(id_mode_bus)
         busedgetimes = edges.get_times(id_mode = id_mode_bus)
         fstar = ptlinks.get_fstar()
+        
         if len(fstar) == 0:
             print 'WARNING: no PT links built.'
             return False
@@ -3293,7 +3406,7 @@ class VirtualpopCreator(Process):
         self.c_popmultiplier = attrsman.add(cm.AttrConf( 'c_popmultiplier',kwargs.get('c_popmultiplier',1.0),
                             groupnames = ['options'], 
                             name = 'Polupation multiplier', 
-                            info = 'Number of person in database is multiplied by this factor.',
+                            info = 'Number of person in mapmatching database is multiplied by this factor.',
                             ))
                             
         self.id_mode_select = attrsman.add(cm.AttrConf( 'id_mode_select',kwargs.get('id_mode_select',choices['pedestrian']),
@@ -3616,7 +3729,7 @@ class PostMatchfilter(FilterMixin):
                             info = 'Matched route must have an existing shortest route. Option required for route analyses.',
                             ))
                             
-        self.is_matched = attrsman.add(cm.AttrConf( 'is_matched',kwargs.get('is_shortis_matchedest',True),
+        self.is_matched = attrsman.add(cm.AttrConf( 'is_matched',kwargs.get('is_matched',True),
                             groupnames = ['options'], 
                             name = 'Must be matched', 
                             info = 'Trips must be matched. Option required for route analyses.',
@@ -4156,13 +4269,21 @@ class TripGeomfilter(FilterMixin):
         surplus = 0
         
         for id_trip, ids_point in  zip(ids_trip, ids_points):
-            n_points = len(ids_point)
-            
-            if ids_point is None or (n_points < 2*self.num_external_points+2 and self.is_eliminate_external_points):
+            print 79*'-'
+            print '  filter id_trip ',id_trip,
+            if ids_point is None:
                 is_eliminate = True 
-                print 'no enough points'
+                print '    no points'
+                
+           
+            
+            elif (len(ids_point) < 2*self.num_external_points+2 and self.is_eliminate_external_points):
+                is_eliminate = True 
+                print '    not enough points, only',len(ids_point) 
+            
             else:
 ##                print 'ids_point',ids_point
+                n_points = len(ids_point)
                 if self.is_eliminate_external_points:
                     ids_point = ids_point[self.num_external_points:(n_points-self.num_external_points)]
                     ext_points_start = list(trips.ids_points[id_trip][:(self.num_external_points)])
@@ -4175,8 +4296,7 @@ class TripGeomfilter(FilterMixin):
                 
                 n = len(ids_point)
                 
-                print 79*'-'
-                print '  check id_trip ',id_trip,'n_point=',n
+                
                 #print '  ids_point=', ids_point
                 #print '  times',times
                 #print '  coords=', coords
@@ -4363,7 +4483,7 @@ class TripGeomfilter(FilterMixin):
                             #print '  after elim ids_point',trips.ids_points[id_trip]
 
                     if is_eliminate:
-                        print 'Deselected trace due to the pont analysis'
+                        print 'Deselected trace due to the point analysis'
                     if self.is_deselect_traces and not is_eliminate:
                         
                         #ricalculate dist_inter and duration_inter
@@ -4717,7 +4837,667 @@ class MobikeImporter(FilterMixin):
         
         self.parent.points.project()
         return True
-                                   
+
+class StravaImporter(FilterMixin):
+    def __init__(self,  mapmatching, logger = None, **kwargs):
+        print 'StravaImporter.__init__',mapmatching.get_ident()
+        self._init_common(  'traceimporter', 
+                            parent = mapmatching,
+                            name = 'Strava Trace Importer', 
+                            logger = logger,
+                            info ='Imports GPS traces and person information from Strava App.',
+                            )
+        
+        
+        attrsman = self.set_attrsman(cm.Attrsman(self))
+        
+        scenario = mapmatching.get_scenario()
+        rootfilepath = scenario.get_rootfilepath()
+        
+        
+        # here we ged classes not vehicle type
+        # specific vehicle type within a class will be generated later 
+        #modechoices = scenario.net.modes.names.get_indexmap()
+        
+        #print '  modechoices',modechoices
+        #self.id_mode = attrsman.add(am.AttrConf('id_mode',  modechoices['bicycle'], 
+        #                                groupnames = ['options'], 
+        #                                choices = modechoices,
+        #                                name = 'Mode', 
+        #                                info = 'Transport mode to be matched.',
+        #                                ))
+                                            
+        
+                        
+        self.pointsfilepath = attrsman.add(cm.AttrConf('pointsfilepath',kwargs.get('pointsfilepath','/home/cristian/Downloads/50_cleaned_gps_traces(1).csv'),
+                                    groupnames = ['options'],
+                                    perm='rw', 
+                                    name = 'Points file', 
+                                    wildcards = 'CSV file (*.csv)|*.csv',
+                                    metatype = 'filepath',
+                                    info = "CSV text file with GPS point database.",
+                                    ))
+                                    
+
+        
+        
+        self.userinfofilepath = attrsman.add(
+                    cm.AttrConf('userinfofilepath',kwargs.get('userinfofilepath','/home/cristian/Downloads/50_cleaned_users(1).csv'),
+                                    groupnames = ['options'],
+                                    perm='rw', 
+                                    name = 'User info file', 
+                                    wildcards = 'CSV file (*.csv)|*.csv',
+                                    metatype = 'filepath',
+                                    info = """CSV text file with user info (optional).""",
+                                    ))
+        
+                                                                                                       
+        self.year = attrsman.add(cm.AttrConf( 'year',kwargs.get('year',2013),
+                            groupnames = ['options'], 
+                            choices = {'2013':2013,},
+                            perm='rw', 
+                            name = 'Year of Strava data', 
+                            info = 'Year of Strava is used to identify the correct database formats.',
+                            ))
+        
+        
+        
+        
+                            
+        modechoices = scenario.demand.vtypes.get_modechoices()
+        modechoices['All'] = 0 # add import all modes option
+        self.id_mode_select = attrsman.add(cm.AttrConf( 'id_mode_select',kwargs.get('id_mode_select',modechoices['bicycle']),
+                            groupnames = ['options'], 
+                            choices = modechoices,
+                            name = 'Select mode', 
+                            info = 'Mode to select.',
+                            ))
+                            
+        self._init_traceoptions(**kwargs)                    
+                            
+
+        
+        self._init_filter_time(**kwargs)
+        self.get_vtype_for_mode = scenario.demand.vtypes.get_vtype_for_mode
+        self._proj = None
+        self._offset = None
+    
+    def project(self, lons,lats):
+        if self._proj is None:
+            self._proj, self._offset = self.parent.get_proj_and_offset()
+        x,y = self._proj(lons, lats)
+        return np.transpose(np.concatenate(([x+self._offset[0]],[y+self._offset[1]]),axis=0))
+        
+        
+    
+    def validate_trip(self, dist, duration, speed_av = -1):
+        if speed_av<0:
+            if duration>1.0:
+                speed_av = dist/duration
+            else:
+                speed_av = 0.0
+        
+        return (dist > self.dist_trip_min)\
+                   & (dist < self.dist_trip_max)\
+                   & (duration > self.duration_trip_min)\
+                   & (speed_av > self.speed_trip_min)\
+                   & (speed_av < self.speed_trip_max)
+                       
+    
+                   
+    def do(self):
+        print 'TraceImporter.do'
+        if self.year == 2013:
+            self.import_points_2013()
+            self.import_users_2013()
+            
+        
+
+        # done during import     
+        self.parent.points.project()
+        return True
+        
+    def import_users_2013(self):
+		log = self.get_logger()
+        
+        
+		print 'import users'
+		if  (self.userinfofilepath == ''):
+			return
+        
+        
+		null = 'NULL'
+		na = '#N/A'
+		trips = self.parent.trips
+		persons = self.parent.persons
+		persons.clear()
+        ## read users
+        
+		persons.add_col(am.ArrayConf('ages_strava', default = AGES_STRAVA['unknown'],
+									choices = AGES_STRAVA,
+									dtype = np.int32,
+									symbol = 'Ages Str.',
+									groupnames = ['parameters'], 
+									name = 'Ages Strava',
+									info = 'Ages with Strava dictionary'
+									))
+                                    
+		persons.add_col(am.ArrayConf('incomes', default = INCOMES_STRAVA['unknown'],
+									dtype = np.int32,
+									symbol = 'Incomes Str.',
+									choices = INCOMES_STRAVA,
+									groupnames = ['parameters'], 
+									name = 'Incomes Strava',
+									info = 'Incomes of cyclists'
+									)) 
+                                    
+		persons.add_col(am.ArrayConf('ethnicities', default = ETHNICITIES_STRAVA['unknown'],
+                                    dtype = np.int32,
+                                    symbol = 'Ethn. Str.',
+                                    choices = ETHNICITIES_STRAVA,
+                                    groupnames = ['parameters'], 
+                                    name = 'Ethnicities Strava',
+                                    info = 'Ethnicities of cyclists'
+                                    )) 
+
+		persons.add_col(am.ArrayConf('cycling_frequencies', default = CYCLING_FREQUENCIES_STRAVA['unknown'],
+                                    dtype = np.int32,
+                                    symbol = 'Freq. Str.',
+                                    choices = CYCLING_FREQUENCIES_STRAVA,
+                                    groupnames = ['parameters'], 
+                                    name = 'Cycling frequencies Strava',
+                                    info = 'Cycling frequencies of cyclists'
+                                    )) 
+                                    
+		persons.add_col(am.ArrayConf('cycling_histories', default = RIDER_HISTORIES_STRAVA['unknown'],
+                                    dtype = np.int32,
+                                    symbol = 'Hist. Str.',
+                                    choices = RIDER_HISTORIES_STRAVA,
+                                    groupnames = ['parameters'], 
+                                    name = 'Cycling histories Strava',
+                                    info = 'Cycling histories of cyclists'
+                                    )) 
+                                    
+		persons.add_col(am.ArrayConf('cyclist_types', default = RIDER_TYPES_STRAVA['unknown'],
+                                    dtype = np.int32,
+                                    symbol = 'Type Str.',
+                                    choices = RIDER_TYPES_STRAVA,
+                                    groupnames = ['parameters'], 
+                                    name = 'Cyclist types Strava',
+                                    info = 'Cyclist types of cyclists'
+                                    )) 
+									
+                                    
+                                    
+                                    
+                                    
+                                            
+        # change from int ti string
+        #print 'GpsPersons.versio,',self.get_version(),self.get_version()<0.2
+        
+        
+		if hasattr(self,'home_zips'):
+                #print '  zips',self.zips.get_value().dtype,self.zips.get_value()
+			if self.home_zips.get_value().dtype in [np.dtype(np.int32),np.dtype(np.int64)]:
+				print 'WARNING: delete old person.home_zips'
+				self.delete('home_zips')
+		if hasattr(self,'school_zips'):
+				#print '  zips',self.zips.get_value().dtype,self.zips.get_value()
+				if self.school_zips.get_value().dtype in [np.dtype(np.int32),np.dtype(np.int64)]:
+					print 'WARNING: delete old person.school_zips'
+					self.delete('school_zips')
+		if hasattr(self,'work_zips'):
+				#print '  zips',self.zips.get_value().dtype,self.zips.get_value()
+				if self.work_zips.get_value().dtype in [np.dtype(np.int32),np.dtype(np.int64)]:
+					print 'WARNING: delete old person.work_zips'
+					self.delete('work_zips')
+                                        
+        #if self.get_version()<0.2:
+        #    #if hasattr(self,'zips'):
+        #   self.delete('zips')
+        #Id_utente,Gender,YearOfBirth
+#ID tripid	userid	trip_type	created_date	      age	gender	income	ethnicity	homeZIP	schoolZip	workZip	cyclingfreq	rider_history	rider_type
+#0	7490	311	    Commute	    2012-11-05 05:32:04	  5	    2	    6	    1	        30306	-1	        30309	 4	        1	            1
+#1	7561	35	    Commute	    2012-10-12 15:07:22	  0  	0	    0	    1	        30316	-1	        30308	 3	        1	            2
+
+		n_cols = 15
+		j_id_line, j_tripid, j_userid, j_trip_type, j_created_date, j_age, j_gender, j_income, j_ethnicity, j_homeZIP, j_schoolZip, j_workZip, j_cyclingfreq, j_rider_history, j_rider_type  = range(15)
+		
+		#dd
+        
+		ids_person_sumo = {}
+        
+        #ids_trips = []
+		scenario = self.parent.get_scenario()
+        
+
+		f=open(self.userinfofilepath,'r')
+		if log: log.w('import_users_2013 import user file %s'%os.path.basename(self.userinfofilepath))
+		sep = ','
+		i_line = 0
+        #self.get_logger().w(100.0*self.simtime/self.duration, key ='progress')
+		persons_temp = {}
+		lines = f.readlines()[1:]
+		user_ids = []
+        
+        
+		for line in lines:
+            #if True:#i_line>1:
+			cols = line.split(sep)
+            #print '    len(cols)',len(cols),n_cols
+            #print '    cols',cols
+			id_person_sumo = cols[j_userid].strip()
+			id_trip_gps = cols[j_tripid].strip()
+                #print '  id_trip_gps',id_trip_gps
+##                print id_trip_gps
+
+			if trips.ids_sumo.has_index(id_trip_gps):
+				id_trip = trips.ids_sumo.get_id_from_index(id_trip_gps) 
+				trips.ids_purpose[id_trip] = TRIPPUROPSES[cols[j_trip_type].strip()]
+				if not persons.ids_sumo.has_index(id_person_sumo):
+					if len(cols)>=n_cols:
+		                # row is complete
+		                #print '  id_trip_sumo',cols[j_id_trip]
+						persons_temp[cols[j_userid].strip()] = (cols[j_age], 
+		                cols[j_gender].strip(), 
+		                cols[j_income].strip(), 
+		                cols[j_ethnicity].strip(), 
+		                cols[j_homeZIP].strip(), 
+		                cols[j_schoolZip].strip(), 
+		                cols[j_workZip].strip(), 
+		                cols[j_cyclingfreq].strip(), 
+		                cols[j_rider_history].strip(), 
+						cols[j_rider_type].strip())
+		                
+		                                            
+					else:
+						print 'WARNING: inconsistent number of columns (%d) in line %d, file %s'%(len(cols),i_line,self.userinfofilepath)
+						print '  cols =',cols
+					if i_line%1000 == 0:
+						print i_line,'/',len(lines), 'users imported'
+					i_line += 1
+		            
+		            
+		            
+					if id_person_sumo != na:
+						age, gender, income, ethnicity, home_zip, school_zip, work_zip, cycling_frequency, cycling_history, cyclist_type = persons_temp[cols[j_userid].strip()]
+						id_pers = persons.make(     id_sumo = id_person_sumo,
+		                                                        gender = GENDERS_STRAVA[gender],
+		                                                        income=income,
+		                                                        ethnicity=ethnicity,
+		                                                        home_zip=home_zip,
+		                                                        school_zip=school_zip,
+		                                                        work_zip=work_zip,
+		                                                        cycling_frequency=cycling_frequency,
+		                                                        cycling_history=cycling_history,
+		                                                        cyclist_type=cyclist_type,
+		                                                        age_strava = age
+		                                                        ) 
+						persons.add_trip(cols[j_userid].strip(), id_trip)
+	                
+				else:
+					persons.add_trip(cols[j_userid].strip(), id_trip)
+
+		f.close()
+        
+        
+    def add_trips(self, trips, points, distances_gps, durations_gps, speeds_av, ids_trip_sumo, ids_trips_points,
+                                ids_mode, timestamps_trips, timestamps_points, longitudes, latitudes, altitudes):
+            
+##            print timestamps_points - timestamps_points[0]
+##            print timestamps_trips - timestamps_trips[0]
+
+            
+			ids_vtype = np.zeros(len(ids_trip_sumo), dtype = np.int32)
+			i = 0
+			for id_mode in ids_mode:
+				ids_vtype[i] = self.get_vtype_for_mode(id_mode)
+				i+=1                   
+            # create new trip
+			print 'add trips'
+			ids_trip = trips.add_rows(ids_sumo = ids_trip_sumo,
+									timestamps = timestamps_trips,
+									ids_vtype = ids_vtype,
+									durations_gps = durations_gps,
+									distances_gps = distances_gps,
+									speeds_average = speeds_av,
+									)
+			print len(ids_trip), 'trips added'
+
+            
+			i_changes = [0]
+			current_id_trips_points = ids_trips_points[0]
+			for id_trips_points, i in zip(ids_trips_points, range(len(ids_trips_points))): 
+				if id_trips_points != current_id_trips_points:
+					i_changes.append(i)
+				current_id_trips_points = id_trips_points
+			i_changes.append(len(ids_trips_points))
+			print len(i_changes)-1, len(ids_trip)
+			for i, id_trip in zip(range(len(i_changes)-1), ids_trip):
+				ids_trips_points[i_changes[i]:i_changes[i+1]] = id_trip*np.ones(len(ids_trips_points[i_changes[i]:i_changes[i+1]]))
+                
+                
+			print 'add points'
+
+##            print timestamps_points, timestamps_trips
+			ids_point = points.add_rows(\
+                        timestamps = timestamps_points,
+                        ids_trip = ids_trips_points,
+                        longitudes = longitudes,
+                        latitudes = latitudes,
+                        altitudes = altitudes,
+                        )
+                        
+			print len(ids_point), 'points added'           
+			print 'add ids points'
+
+            # bellamossa does provide no altitude
+            #points.coords[ids_point][:,:2] =  coords 
+			for i, id_trip in zip(range(len(i_changes)-1), ids_trip):
+##                print points.get_ids()[(points.ids_trip[points.get_ids()] == id_trip)]
+				trips.set_points(id_trip, ids_point[i_changes[i]:i_changes[i+1]])
+            #print '    timestamps',timestamps
+##            if len(timestamps)>1:
+##                trips.durations_gps[id_trip] = timestamps[-1]-timestamps[0]
+			for id_trip in ids_trip:
+				positive_elevation = 0.0
+				negative_elevation = 0.0
+				ids_point_trip = trips.ids_points[id_trip]
+				altitude_ahead = points.altitudes[ids_point_trip[0]]
+				if len(ids_point_trip)>3:
+					i = 0
+					for id_point in ids_point_trip:
+						i+=1
+						if i%20 == 0:
+							if points.altitudes[id_point] >= altitude_ahead:
+								positive_elevation += (points.altitudes[id_point] - altitude_ahead)
+								altitude_ahead = points.altitudes[id_point]
+							else:
+								negative_elevation +=  (altitude_ahead - points.altitudes[id_point])
+								altitude_ahead = points.altitudes[id_point]
+	
+				trips.positive_elevations[id_trip] = positive_elevation
+				trips.negative_elevations[id_trip] = negative_elevation
+				
+
+    def check_trip(self, trips, points, id_trip_sumo, 
+                                id_mode, timestamps, longitudes, latitudes):
+        
+        is_valid = False
+        #print 'validate_and_add_trip id_trip_sumo',id_trip_sumo
+        if (len(timestamps)>1):
+            # here we could check whether the already
+            coords = self.project( longitudes,latitudes)
+            #print '  coords',coords
+            distance_gps = np.sum( np.sqrt(np.sum((coords[1:,:]-coords[:-1,:])**2,1)) )
+            # no get_length_polypoints(coords)
+            duration_gps = timestamps[-1]-timestamps[0]
+            if duration_gps>0:
+                speed_av = distance_gps/duration_gps
+            else:
+                speed_av = 0.0
+            #print '   len(trace)',len(timestamps)
+            #print '   distance_gps',   distance_gps 
+            #print '   duration_gps',   duration_gps
+            #print '   speed_av',   speed_av 
+            #print '   id_mode',   id_mode, (self.id_mode_select == 0) | (id_mode == self.id_mode_select)
+            #print '   timestamp_ok',self.is_timestamp_ok(timestamps[0])
+           
+            # recorded trip is valid
+            if (self.id_mode_select == 0) | (id_mode == self.id_mode_select):
+                if self.validate_trip(distance_gps, duration_gps, speed_av)\
+                    & self.is_timestamp_ok(timestamps[0]):
+                    #print '  store past points for valid trip',id_trip
+                    is_valid = True
+                    
+##                    # create new trip
+##                    id_trip = trips.add_row(ids_sumo = id_trip_sumo,
+##                                            timestamps = timestamps[0],
+##                                            ids_vtype = self.get_vtype_for_mode(id_mode),
+##                                            durations_gps = duration_gps,
+##                                            distances_gps = distance_gps,
+##                                            speeds_average = speed_av,
+##                                            )
+##                                            
+##                    
+##                    ids_point = points.add_rows(\
+##                                timestamps = timestamps,
+##                                ids_trip = id_trip*np.ones(len(timestamps), dtype = np.int32),
+##                                longitudes = longitudes,
+##                                latitudes = latitudes,
+##                                altitudes = np.zeros(len(longitudes), dtype = np.float32),
+##                                )
+##                    # bellamossa does provide no altitude
+##                    #points.coords[ids_point][:,:2] =  coords       
+##                    trips.set_points(id_trip, ids_point)
+##                    #print '    timestamps',timestamps
+##                    if len(timestamps)>1:
+##                        trips.durations_gps[id_trip] = timestamps[-1]-timestamps[0]
+        if is_valid:
+            return is_valid, distance_gps, duration_gps, speed_av
+        else:
+            return is_valid, 0., 0., 0.
+                                
+    def import_points_2013(self):
+        print 'import_points_2013'
+        log = self.get_logger()
+        #pointDBNode,   pointPathId,    id,     timestamp,          latitude,   longitude,  altitude,distance,  heartRate,instruction,speed
+        #4,             61565791,   23648171762,2013-05-01 06:33:58,44.501085,  11.372906,  NULL,       0,      NULL,       2,          NULL
+        #0                  1         2          3                      4          5            6       7       8           9           10
+	#      tripid	datetime	           lat	       lon         	altitude	speed hAccuracy	vAccuracy
+	#221515	7490	2013-05-08 07:59:29	33.78492	-84.356894	259.6000061035	9.25	   3	    3
+	#221516	7490	2013-05-08 07:59:30	33.784921	-84.357001	259.700012207	9.5	3	   3
+	#221517	7490	2013-05-08 07:59:32	33.784918	-84.357205	259.5	9.5	4	4
+	#221518	7490	2013-05-08 07:59:34	33.784923	-84.357416	259.200012207	9.75	   3	     3
+
+        
+        ind_id_path = 1
+        ind_id_point = 0
+        ind_time = 2
+        ind_lat = 3
+        ind_lon = 4
+        ind_alt = 5
+        #ind_dist = 7
+        ind_speed = 6
+        
+        n_cols = 9
+        
+        mapmatching = self.parent
+        scenario = mapmatching.get_scenario()
+        
+        trips = mapmatching.trips# 
+        
+        modechoices = scenario.demand.vtypes.get_modechoices()
+        map_bellamossamode_to_id_mode = { 'Walk':modechoices['pedestrian'],
+                                           'Cycle':modechoices['bicycle'],
+                                           'Bus':modechoices['bus'],
+                                           'Train':modechoices['rail_urban'],
+                                      }
+        
+        id_mode_default = modechoices['pedestrian']
+        points = mapmatching.points
+        
+        exist_id_trip_sumo = trips.ids_sumo.has_index
+        get_id_trip = trips.ids_sumo.get_id_from_index
+        
+        sep = ','#self.sep_column_points
+            
+        f=open(self.pointsfilepath,'r')
+        if log: log.w('import_points_2013 %s'%os.path.basename(self.pointsfilepath))
+        
+        i_line = 0
+        id_trip_sumo = None
+        id_trip = -1
+        id_vtype = -1
+        is_valid_trip = False
+        timestamps = []
+        ids_trip = []
+        longitudes = []
+        latitudes = []
+        i_trip = -1
+        i_point = -1
+        i_points = []
+        id_mode = -1
+        #altitudes = []
+        n_points_imported = 0
+        lines = f.readlines()[1:]
+        n_lines = len(lines)
+        n_trips = len(lines)
+        print 'analyze', n_lines, 'points and', n_trips, 'trips'
+
+        ids_trip_sumo = np.zeros(n_trips,dtype = 'object')                      
+        ids_mode  = np.zeros(n_trips,dtype = np.int32)                            
+        timestamps_trips = np.zeros(n_trips,dtype = np.int32)
+        distances_gps= np.zeros(n_trips,dtype = np.float32)
+        durations_gps = np.zeros(n_trips,dtype = np.float32)
+        speeds_av = np.zeros(n_trips,dtype = np.float32)
+        
+        ids_trips_points = np.zeros(n_lines,dtype = 'object') 
+        timestamps_points = np.zeros(n_lines,dtype = np.int32)       
+        longitudes_points = np.zeros(n_lines,dtype = np.float32)
+        latitudes_points = np.zeros(n_lines,dtype = np.float32)
+        altitudes_points = np.zeros(n_lines,dtype = np.float32)
+        for line in lines:# first line contains header
+            
+            
+            cols = line.strip().split(sep)
+            #print '    len(cols)',len(cols),n_cols
+            if len(cols)==n_cols:
+                i_point += 1
+                i_points.append(i_point)
+                id_trip_sumo_current = cols[ind_id_path]
+                #print '    id_trip_sumo_current,id_trip_sumo',id_trip_sumo_current,id_trip_sumo,is_valid_trip,id_mode
+                if id_trip_sumo_current != id_trip_sumo:
+                    # this point is part of new trip
+                    i_trip += 1
+                    if is_valid_trip:
+                        
+                        is_valid, distance_gps, duration_gps, speed_av = self.check_trip(trips, points, id_trip_sumo, 
+                                id_mode, timestamps, longitudes, latitudes)
+                        if is_valid:
+##                            print len(timestamps), len(longitudes), len(i_points)
+                            
+                            ids_trip_sumo[i_trip] = id_trip_sumo                      
+                            ids_mode[i_trip]  =  id_mode                           
+                            timestamps_trips[i_trip] = timestamps[0]
+                            distances_gps[i_trip] = distance_gps
+                            durations_gps[i_trip] = duration_gps
+                            speeds_av[i_trip] = speed_av
+                            
+                            i_points = np.array(i_points, dtype = np.int32)
+                            for i_p, timestamp, longitude, latitude, altitude in zip(i_points, timestamps, longitudes, latitudes, altitudes):
+                                timestamps_points[i_p] = timestamp      
+                                longitudes_points[i_p] = longitude
+                                latitudes_points[i_p] = latitude
+                                altitudes_points[i_p] = altitude
+                                ids_trips_points[i_p] = id_trip_sumo
+##                                print timestamp
+##                                print timestamps_points[i_p]
+##                                print timestamps[0], timestamps_points[i_p] - timestamps[0]
+##                                print timestamps_points[i_p], timestamps_trips[i_trip]
+                        
+                        i_points = []
+                    else:
+                        # one point old trip will not be registered
+                        pass
+                    i_points = []
+                    
+                    # check if new trip is valid # trips.ids_sumo.has_index
+                    #if exist_id_trip_sumo(id_trip_sumo_current):
+                        
+                    is_valid_trip = True # start recording
+                    #id_trip = get_id_trip(id_trip_sumo_current)
+                    #print '    found trip',id_trip,id_trip_sumo_current,' exisits-> record'
+                    
+                    # ids_point_sumo = [] # useless?
+                    timestamps = []
+                    #ids_trip = []
+                    longitudes = []
+                    latitudes = []
+                    altitudes = []
+                        
+                    #else:
+                    #    #print '    trip',id_trip_sumo_current,'does not exisit'
+                    #    is_valid_trip  = False
+                    #    id_trip = -1
+                        
+                    id_trip_sumo = id_trip_sumo_current
+                    #id_vtype = get_vtype_for_mode(mode = map_bellamossamode_to_sumomode.get(cols[ind_mode], 'pedestrian'))
+                    id_mode =  self.id_mode_select
+                    #print '   id_mode',id_mode,cols[ind_mode]
+                    is_adding = True
+                else: 
+                    is_adding = False
+                    
+                if is_valid_trip:
+                    #print '    store point timestamp',cols[ind_time]
+                    # current point belongs to a valid trip
+                    #ids_point_sumo.append(cols[ind_id_point])
+                    timestamps.append(calc_seconds(cols[ind_time]))
+                    
+                    #ids_trip.append(id_trip)
+                    longitudes.append(get_colvalue(cols[ind_lon]))
+                    latitudes.append(get_colvalue(cols[ind_lat]))
+                    altitudes.append(get_colvalue(cols[ind_alt]))
+                    
+      
+                
+            else:
+                print 'WARNING: inconsistent number of columns (%d) in line %d, file %s'%(len(cols),i_line,self.pointsfilepath)
+                print '  cols =',cols
+            
+            if i_line%500000 == 0:
+                print i_line,'/',len(lines), 'points imported'
+            i_line += 1
+        
+        # register points of last trip after loop ended
+        if is_adding == False:
+                i_trip += 1
+                if is_valid_trip:
+                    
+                    is_valid, distance_gps, duration_gps, speed_av = self.check_trip(trips, points, id_trip_sumo, 
+                            id_mode, timestamps, longitudes, latitudes)
+                    if is_valid:
+##                            print len(timestamps), len(longitudes), len(i_points)
+                        
+                        ids_trip_sumo[i_trip] = id_trip_sumo                      
+                        ids_mode[i_trip]  =  id_mode                           
+                        timestamps_trips[i_trip] = timestamps[0]
+                        distances_gps[i_trip] = distance_gps
+                        durations_gps[i_trip] = duration_gps
+                        speeds_av[i_trip] = speed_av
+                        
+                        i_points = np.array(i_points, dtype = np.int32)
+                        for i_p, timestamp, longitude, latitude, altitude in zip(i_points, timestamps, longitudes, latitudes, altitudes):
+                            timestamps_points[i_p] = timestamp      
+                            longitudes_points[i_p] = longitude
+                            altitudes_points[i_p] = altitude
+                            latitudes_points[i_p] = latitude
+                            altitudes_points[i_p] = altitude
+                            ids_trips_points[i_p] = id_trip_sumo
+        
+                         
+        ids_mode  =  ids_mode[( ids_trip_sumo  > 0 )]  
+        distances_gps =  distances_gps[( ids_trip_sumo  > 0 )] 
+        durations_gps =  durations_gps[( ids_trip_sumo  > 0 )] 
+        speeds_av  =  speeds_av[( ids_trip_sumo  > 0 )] 
+        timestamps_trips = timestamps_trips[( ids_trip_sumo  > 0 )] 
+        ids_trip_sumo = ids_trip_sumo[( ids_trip_sumo  > 0 )] 
+        
+        longitudes_points = longitudes_points[( ids_trips_points  > 0 )] 
+        latitudes_points = latitudes_points[( ids_trips_points  > 0 )] 
+        altitudes_points = altitudes_points[( ids_trips_points  > 0 )] 
+        timestamps_points =   timestamps_points[( ids_trips_points  > 0 )]     
+        ids_trips_points =  ids_trips_points[( ids_trips_points  > 0 )] 
+        
+
+                
+        self.add_trips(trips, points, distances_gps, durations_gps, speeds_av, ids_trip_sumo, ids_trips_points,
+                                ids_mode, timestamps_trips, timestamps_points, longitudes_points, latitudes_points, altitudes_points)
+        
+        f.close()
+             
+
 class BellamossaImporter(FilterMixin):
     def __init__(self,  mapmatching, logger = None, **kwargs):
         print 'BellamossaImporter.__init__',mapmatching.get_ident()
@@ -5401,8 +6181,8 @@ class EccTracesImporter(FilterMixin):
         return True
         
     def import_workouts_2016(self):
-        #UserID	                    TripID	                    TimeStamp	Start DT	                Distance	 ECC	 AvgSpeed	 TrackType	 Sex	 Year	 Profession	 Frequent User	 ZIP	 Source	  TypeOfBike	 TipeOfTrip	 Max Spd
-        #57249bcd88c537874f9fa1ae	57515edc88c537576ca3e16f	1464945480	2016-06-03T09:18:00.000Z	4.75	4.75	    10.16	    urban bicycle	F	1999	Studente	    yes		            cy-web-gpx	MyBike	    HomeToSchool	25.45
+        #UserID                        TripID                        TimeStamp    Start DT                    Distance     ECC     AvgSpeed     TrackType     Sex     Year     Profession     Frequent User     ZIP     Source      TypeOfBike     TipeOfTrip     Max Spd
+        #57249bcd88c537874f9fa1ae    57515edc88c537576ca3e16f    1464945480    2016-06-03T09:18:00.000Z    4.75    4.75        10.16        urban bicycle    F    1999    Studente        yes                    cy-web-gpx    MyBike        HomeToSchool    25.45
 
         j_id_user, j_id_trip, j_timestamp, j_date, j_dist, j_dist_copy, j_speed_av, j_tracktype, j_sex, j_year, j_profession, j_frequent, j_zip, j_device, j_biketype, j_purpose, j_speedmax = range(17)
         n_cols = 17
@@ -5461,9 +6241,9 @@ class EccTracesImporter(FilterMixin):
                             #ids_trips.append(id_trip)
                             #j_id_user, j_id_trip, j_timestamp, j_date, j_dist, j_speed_av, j_tracktype, j_sex, j_year, j_profession, j_frequent, j_zip 
                             
-                            zip=   cols[j_zip].strip()
-                            if zip == 'undefined':
-                                zip = ''
+                            zipcode=   cols[j_zip].strip()
+                            if zipcode == 'undefined':
+                                zipcode = ''
                             
                             year=cols[j_year]
                             if year.isdigit():
@@ -5479,10 +6259,14 @@ class EccTracesImporter(FilterMixin):
                                             year_birth = year_birth,
                                             occupation = cols[j_profession].strip(),
                                             is_frequent_user = cols[j_frequent].strip().lower() == 'yes',
-                                            zip = zip,
+                                            zip = zipcode,
                                             ) 
                             #print '  id_trip,id_trip_sumo,id_pers',id_trip,cols[j_id_trip], id_pers
                             #print
+                
+                else:
+                    print '  invalid trip',cols[j_id_trip]
+                
             else:
                 print 'WARNING: inconsistent number of columns (%d) in line %d, file %s'%(len(cols),i_line,self.workoutsfilepath)
                 print '  cols =',cols
@@ -5615,9 +6399,9 @@ class EccTracesImporter(FilterMixin):
         
         # 2015 csv 
         # workouts
-        #UserID	 TripID	 TimeStamp	 Start DT	  Distance	 AvgSpeed	 TrackType	 Sex	 Year	 Profession	 Frequent User	 ZIP
-        #54eb068de71f393530a9a74d	54eb0737e71f394c2fa9a74d	1424692504	Mon, 23 Feb 2015 11:55:04 GMT	0	0	urban bicycle	M	1987	Developer	no	
-        #54eb9374e71f39f02fa9a750	5505cb04e71f39542e25e2d4	1426442994	Sun, 15 Mar 2015 18:09:54 GMT	0	0.7	urban bicycle	M	1974	Worker	yes	40128
+        #UserID     TripID     TimeStamp     Start DT      Distance     AvgSpeed     TrackType     Sex     Year     Profession     Frequent User     ZIP
+        #54eb068de71f393530a9a74d    54eb0737e71f394c2fa9a74d    1424692504    Mon, 23 Feb 2015 11:55:04 GMT    0    0    urban bicycle    M    1987    Developer    no    
+        #54eb9374e71f39f02fa9a750    5505cb04e71f39542e25e2d4    1426442994    Sun, 15 Mar 2015 18:09:54 GMT    0    0.7    urban bicycle    M    1974    Worker    yes    40128
 
         j_id_user, j_id_trip, j_timestamp, j_date, j_dist, j_speed_av, j_tracktype, j_sex, j_year, j_profession, j_frequent, j_zip = range(12)
         n_cols = 12
@@ -5826,8 +6610,8 @@ class EccTracesImporter(FilterMixin):
     def import_workouts_2014(self):
         print 'import_workouts_2014'
         # 2014 ecomondo workouts
-        #id	        pointDBNode	pointPathId	startTime	        distance	duration	sport	calories	maxSpeed	altitudeMin	altitudeMax	metersAscent	metersDescent
-        #329308466	7	        37073516	2014-05-01 19:00:00	    26	    15600	    1	    1182.64	    NULL	    NULL	    NULL	    NULL	        NULL 
+        #id            pointDBNode    pointPathId    startTime            distance    duration    sport    calories    maxSpeed    altitudeMin    altitudeMax    metersAscent    metersDescent
+        #329308466    7            37073516    2014-05-01 19:00:00        26        15600        1        1182.64        NULL        NULL        NULL        NULL            NULL 
         # 0         1           2            3                       4          5       6          7        8           9          10          11                   12             
         
         j_id, j_node, j_id_trip, j_time, j_dist,j_duration = range(6)
@@ -6225,6 +7009,19 @@ class GpxImporter(FilterMixin):
             
         mapmatching.points.project()
         
+        for id_trip in mapmatching.trips.get_ids():
+            ids_points = mapmatching.trips.ids_points[id_trip]
+            init_point = mapmatching.points.coords[ids_points[0]]
+            final_point = mapmatching.points.coords[ids_points[-1]]
+              
+            dist = np.sqrt(   (init_point[0]- final_point[0])**2\
+                                                + (init_point[1]- final_point[1])**2 )
+            duration = mapmatching.trips.durations_gps[id_trip]
+##            print init_point, final_point, dist
+            mapmatching.trips.distances_gps[id_trip] = dist
+            if duration >0:
+                mapmatching.trips.speeds_average[id_trip] = dist/duration
+        
         if logger: logger.w('imported %d trips done.'%len(ids_trips))
         return True
                                                                                                             
@@ -6381,6 +7178,8 @@ class GpxParser(handler.ContentHandler):
                                             
                     self._trips.set_points(id_trip, ids_point)
                     self._trips.ids_sumo[id_trip] = str(id_trip)
+                    
+
             
             self.reset_trip()
                     
@@ -6635,9 +7434,14 @@ class GtfsStopGenerator(Process):
                             name = 'Edge search number',
                             info = 'Maximum number of closest edges which alorithm considers when detecting edges around given stop coordinates.',
                             ))
+        self.is_clear_ptstops = attrsman.add(cm.AttrConf( 'is_clear_ptstops', kwargs.get('is_clear_ptstops',True),
+                                    groupnames = ['options'], 
+                                    perm='rw', 
+                                    name = 'Clear PT stops',
+                                    info = 'Clear previously existing public transport line stops.' 
+                                    )) 
                                                                                         
-        #self.init_accessprovider(**kwargs)
-    
+        
     #def place_stop(self, id_stop, name_stop, lat_stop, lon_ stop, **kwargs):
         
     def do(self):
@@ -6656,6 +7460,9 @@ class GtfsStopGenerator(Process):
         lanes = net.lanes
         ptstops = net.ptstops
         
+        if self.is_clear_ptstops:
+            ptstops.clear()
+        
         gpstrips = mapmatching.trips
         get_id_gpstrip = gpstrips.ids_sumo.get_id_from_index
         ids_edges_shape = self.parent.trips.routes.get_value().ids_edges
@@ -6665,7 +7472,7 @@ class GtfsStopGenerator(Process):
         # define global variables which will not be saved by mapmatching
         #mapmatching.get_attrsman().do_not_save_attrs(['gtfsdirpath'])
         
-          
+        
         
         
         proj, offset = self.parent.get_proj_and_offset()
@@ -6753,7 +7560,7 @@ class GtfsStopGenerator(Process):
         ## go through stop_times.txt and fetch for each shape_id the trip_id  
         ## with the maximum number of    stop_ids_max
         ## > shape_id -> trip_id , ids_edge , ids_stop_max
-        #trip_id	arrival_time	departure_time	stop_id	stop_sequence
+        #trip_id    arrival_time    departure_time    stop_id    stop_sequence
 
         filepath = os.path.join(self.gtfsdirpath, 'stop_times.txt')
         f=open(filepath,'r')
@@ -6821,7 +7628,7 @@ class GtfsStopGenerator(Process):
         
         filepath = os.path.join(self.gtfsdirpath, 'stops.txt')
         f=open(filepath,'r')
-        #stop_id	stop_name	stop_lat	stop_lon	location_type	parent_station
+        #stop_id    stop_name    stop_lat    stop_lon    location_type    parent_station
 
         ind_stop_id = 0
         ind_stop_name = 1
@@ -6863,7 +7670,7 @@ class GtfsStopGenerator(Process):
         accesslevelsmap = self.parent.get_accesslevelsmap()
         #gtfsstop_to_simstop = {}
         for id_stop, coord, stopname in zip(ids_stop_gtfs,coords, stopnames):
-            print '\n  id_stop',id_stop, coord,'id_gpstrip',get_id_gpstrip(stop_shapes[id_stop])
+            print '\n  id_stop',id_stop,'id_gpstrip',get_id_gpstrip(stop_shapes[id_stop])
             print '    id_gpsroute',gpstrips.ids_route_matched[get_id_gpstrip(stop_shapes[id_stop])]
             ids_edge_target = ids_edges_shape[gpstrips.ids_route_matched[get_id_gpstrip(stop_shapes[id_stop])]]
             #print '    ids_edge_target',ids_edge_target
@@ -6880,7 +7687,7 @@ class GtfsStopGenerator(Process):
             ind = 0
             is_hit = False
             n_hits = len(ids_edge_hit)
-            print '    n_hits',n_hits,'len(ids_edge_target)',len(ids_edge_target),'dists',dists
+            print '    n_hits',n_hits,'len(ids_edge_target)',len(ids_edge_target)
             while (not is_hit) & (ind<n_hits):
                 #for id_edge in  ids_edge_hit:
                 id_edge =  ids_edge_hit[ind]
@@ -7086,7 +7893,7 @@ class GtfsServiceGenerator(Process):
                             ))
                             
         
-        self.time_dwell = attrsman.add(cm.AttrConf( 'time_dwell', kwargs.get('is_frequ_est',20),
+        self.time_dwell = attrsman.add(cm.AttrConf( 'time_dwell', kwargs.get('time_dwell',20),
                                     groupnames = ['options'], 
                                     perm='rw', 
                                     name = 'Dwell time',
@@ -7099,15 +7906,44 @@ class GtfsServiceGenerator(Process):
                                     perm='rw', 
                                     name = 'Freqency. est',
                                     info = 'Estimate and approximate frequency of services if not provided.' 
-                                    ))                            
+                                    ))  
+        
+        self.hour_begin_frequ = attrsman.add(cm.AttrConf( 'hour_begin_frequ',kwargs.get('hour_begin_frequ',-1),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            name = 'From hour for const. frequ', 
+                            unit = 'h',
+                            info = 'Only used with frequency etsimation: Create only services after this hour. Value of -1 takes time from times from database.',
+                            ))
+        
+        self.hour_end_frequ = attrsman.add(cm.AttrConf( 'hour_end_frequ',kwargs.get('hour_end_frequ',-1),
+                            groupnames = ['options'], 
+                            perm='rw', 
+                            name = 'To hour for const. frequ', 
+                            unit = 'h',
+                            info = 'Only used with frequency etsimation: Create only services before this hour, excluding this hour. Value of -1 takes time from times from database.',
+                            ))
+                            
+        self.is_clear_ptlines = attrsman.add(cm.AttrConf( 'is_clear_ptlines', kwargs.get('is_clear_ptlines',True),
+                                    groupnames = ['options'], 
+                                    perm='rw', 
+                                    name = 'Clear PT lines',
+                                    info = 'Clear previously existing public transport line services.' 
+                                    ))   
     
     def do(self):
         sep = ','
         aa = '\"'
+        print 'GtfsServiceGenerator.do is_frequ_est',self.is_frequ_est
         
+    
         # for later processes
         mapmatching = self.parent
         mapmatching.gtfsdirpath = self.gtfsdirpath
+        
+        
+        if self.is_clear_ptlines:
+            mapmatching.get_scenario().demand.ptlines.clear()
         
         # for debugging
         #map_service_to_route = mapmatching.map_service_to_route
@@ -7116,7 +7952,7 @@ class GtfsServiceGenerator(Process):
         ## check dates when services are available
         filepath = os.path.join(self.gtfsdirpath, 'calendar_dates.txt')
         f=open(filepath,'r')
-        # service_id	date	exception_type
+        # service_id    date    exception_type
 
         ind_service_id = 0
         ind_date = 1
@@ -7132,17 +7968,17 @@ class GtfsServiceGenerator(Process):
             year,month,day = (date[0:4],date[4:6],date[6:8])
             id_service = cols[ind_service_id].strip().strip(aa)
             print '  id_service',id_service,'year,month,day',year,month,day,(int(year) == self.year) ,(int(month) == self.month),(int(day) == self.day),
-            #service_to_date [cols[ind_service_id].strip().strip(aa)] = (date[0:4],date[4:6],date[6:8])
-            
-            
+
             
             if (int(year) == self.year) & (int(month) == self.month) &(int(day) == self.day):
                 print 'valid'
-                ids_service_valid.append(cols[ind_service_id].strip().strip(aa))
+                ids_service_valid.append(id_service)
             else:
                 print 'not valid'
+                
         f.close()
         
+
         if len(ids_service_valid)>0:
             if self.is_frequ_est:
                 return self.schedule_frequ_est(ids_service_valid)
@@ -7161,11 +7997,17 @@ class GtfsServiceGenerator(Process):
         logger = self.get_logger()
         scenario = mapmatching.get_scenario()
         net = scenario.net
+        vtypes = scenario.demand.vtypes
         #edges = net.edges
         #lanes = net.lanes
         #ptstops = net.ptstops
         ptlines = scenario.demand.ptlines
         
+        distancesmap = mapmatching.get_distancesmap()
+        #accesslevelsmap = mapmatching.get_accesslevelsmap()
+        fstarmap = mapmatching.get_fstarmap(is_return_arrays = True, is_ignor_connections = False)
+        
+     
         gpstrips = mapmatching.trips
         trip_stops = mapmatching.trip_stops
         trip_times = mapmatching.trip_times
@@ -7192,6 +8034,7 @@ class GtfsServiceGenerator(Process):
         # which is different from the GTFS service ID
         stopsequence_to_services = {}
         for id_service, ids_trip in mapmatching.map_service_to_trips.iteritems():
+
             if id_service in ids_service_valid:
                 for id_trip in ids_trip:
                     
@@ -7239,73 +8082,123 @@ class GtfsServiceGenerator(Process):
         ids_route_count = {}
         for ids_simstop, services in stopsequence_to_services.iteritems():
             
-            # sort trips with identical stop sequences by start time
-            # this is only to extract first run time
-            # actually no longer needed
-            services.sort()
-            time_first = services[0][0]
-            time_end = services[-1][0]
+            if len(ids_simstop) >= 2: # at least 2 stops
+                # sort trips with identical stop sequences by start time
+                # this is only to extract first run time
+                # actually no longer needed
+                services.sort()
+                time_first = services[0][0]
+                time_end = services[-1][0]
+                
+                
+                
+                # pick example trip to get route
+                id_trip = services[0][2]
+                #id_service = services[0][1]
+                
+                # here it is assumed that all services with the same
+                # sequence of stops produce the same route ID 
+                # which corrisponds to the line name 
+                id_route = map_trip_to_route[id_trip]
+                
+                
+                n_services = len(services)
+                if time_end-time_first<1:
+                    # configure single time service
+                    freq = time_inter+1
+                    time_end = time_first+1
+                else:
+                    # calculate average service time
+                    #freq = int(float(time_end-time_first)/n_services)
+                    freq = int(time_inter/n_services)
+                
+                # check for custom defined service times
+                if self.hour_begin_frequ >= 0:
+                    time_first = 3600.0*self.hour_begin_frequ
+                if self.hour_end_frequ >= 0:
+                    time_end = 3600.0*self.hour_end_frequ
+                    
+                if id_route not in ids_route_count:
+                    ids_route_count[id_route] = 0
+                else:
+                    ids_route_count[id_route] += 1
+                
+                linename = '%s_%s'%(id_route,ids_route_count[id_route])
+          
+                #linename = '%s_%s'%(map_service_to_route[id_estservice],id_estservice,)
+                id_gpstrip = get_id_gpstrip(map_trip_to_shape[id_trip])
             
-            
-            
-            # pick example trip to get route
-            id_trip = services[0][2]
-            #id_service = services[0][1]
-            
-            # here it is assumed that all services with the same
-            # sequence of stops produce the same route ID 
-            # which corrisponds to the line name 
-            id_route = map_trip_to_route[id_trip]
-            
-            
-            n_services = len(services)
-            if time_end-time_first<1:
-                # configure single time service
-                freq = time_inter+1
-                time_end = time_first+1
-            else:
-                # calculate average service time
-                #freq = int(float(time_end-time_first)/n_services)
-                freq = int(time_inter/n_services)
-            
-            if id_route not in ids_route_count:
-                ids_route_count[id_route] = 0
-            else:
-                ids_route_count[id_route] += 1
-            
-            linename = '%s_%s'%(id_route,ids_route_count[id_route])
-      
-            #linename = '%s_%s'%(map_service_to_route[id_estservice],id_estservice,)
-            id_gpstrip = get_id_gpstrip(map_trip_to_shape[id_trip])
-        
-            ids_edge = ids_edges_shape[gpstrips.ids_route_matched[id_gpstrip]]
-            
-            id_line = ptlines.make(linename = linename, 
-                                    time_begin = time_first,
-                                    time_end = time_end,# 
-                                    period = freq,
-                                    time_dwell= self.time_dwell,
-                                    ids_stop= list(ids_simstop),
-                                    ids_edge= ids_edge,
-                                    id_vtype= gpstrips.ids_vtype[id_gpstrip],
-                                    )
-            
-            print '  scheduled',linename,'time_start %d'%time_start,'time_end %d'%time_end,'frequ %d'%freq,'id_stop',trip_stops[id_trip][0]
-            print '      id_gpstrip',id_gpstrip,'id_gpsroute',gpstrips.ids_route_matched[id_gpstrip]
-            print '        ids_simstop',ids_simstop
-            print '        ids_edge',ids_edge
-            t = time_first                        
-            for time_start, id_service, id_trip in services:
-                print '           check id_trip',id_trip,'time_start %d'%time_start,'t %.d'%t,'delay',time_start-t
-                t = t + freq
-            id_estservice += 1     
+                ids_edge = ids_edges_shape[gpstrips.ids_route_matched[id_gpstrip]]
+                
+                # corrrect pt route matching problems
+                id_vtype= gpstrips.ids_vtype[id_gpstrip]
+                id_mode = vtypes.ids_mode[id_vtype]
+                
+                ids_edge = self.correct_route(list(ids_simstop), ids_edge, net, fstarmap[id_mode], distancesmap[id_mode])
+                
+                id_line = ptlines.make(linename = linename, 
+                                        time_begin = time_first,
+                                        time_end = time_end,# 
+                                        period = freq,
+                                        time_dwell= self.time_dwell,
+                                        ids_stop= list(ids_simstop),
+                                        ids_edge= ids_edge,
+                                        id_vtype= id_vtype,
+                                        )
+                print '\n',70*'-'
+                print '  scheduled',linename,'time_start %d'%time_start,'time_end %d'%time_end,'frequ %d'%freq,'id_stop',trip_stops[id_trip][0]
+                print '      id_gpstrip',id_gpstrip,'id_gpsroute',gpstrips.ids_route_matched[id_gpstrip]
+                #print '        ids_simstop',ids_simstop
+                #print '        ids_edge',ids_edge
+                t = time_first                        
+                for time_start, id_service, id_trip in services:
+                    print '           check id_trip',id_trip,'time_start %d'%time_start,'t %.d'%t,'delay',time_start-t
+                    t = t + freq
+                id_estservice += 1     
             
                     
                 
             
         return True
                             
-                                    
+    def correct_route(self, ids_stop, ids_edge, net, fstar, distances):
+        """
+        Can happen that edge of first and last stop is not part of the route
+        due to unprecise mapmatching. Here this problem is fixed.
+        """
+        #print 'correct_route ids_stop'#,ids_stop
+        ids_edge_stop = net.lanes.ids_edge[net.ptstops.ids_lane[ids_stop]]
+        #print '  redges',ids_edge
+        #print '  sedges',ids_edge_stop
+        #for id_stop in ids_stop:
+        if ids_edge_stop[0] not in  ids_edge:
+            #print '  try to fix beginning of bus route'
+            dist, ids_edges_fix  = routing.get_mincostroute_edge2edge(\
+                                                ids_edge_stop[0], 
+                                                ids_edge[0], 
+                                                weights = distances, 
+                                              fstar = fstar)
+            if dist > 0:
+                return ids_edges_fix[:-1] + ids_edge
+            else:
+                #print '  failed to fix beginning of bus route'
+                return  ids_edge
+            
+        if ids_edge_stop[-1] not in  ids_edge:
+            #print '  try to fix end of bus route'
+            dist, ids_edges_fix  = routing.get_mincostroute_edge2edge(\
+                                                ids_edge[-1],
+                                                ids_edge_stop[-1], 
+                                                weights = distances, 
+                                                fstar = fstar)
+            if dist > 0:
+                return  ids_edge + ids_edges_fix[1:]
+            else:
+                #print '  failed to fix end of bus route'
+                return  ids_edge
+                 
+        return ids_edge
+                                        
     def schedule_simple(self, ids_service_valid):
         """
         Plain scheduling of services.
@@ -7314,6 +8207,13 @@ class GtfsServiceGenerator(Process):
         logger = self.get_logger()
         scenario = mapmatching.get_scenario()
         net = scenario.net
+        vtypes = scenario.demand.vtypes
+        
+        distancesmap = mapmatching.get_distancesmap()
+        #accesslevelsmap = mapmatching.get_accesslevelsmap()
+        fstarmap = mapmatching.get_fstarmap(is_return_arrays = True, is_ignor_connections = False)
+        
+        
         #edges = net.edges
         #lanes = net.lanes
         #ptstops = net.ptstops
@@ -7324,7 +8224,8 @@ class GtfsServiceGenerator(Process):
         trip_times = mapmatching.trip_times
         #gtfsstop_to_simstop = mapmatching.gtfsstop_to_simstop
         map_trip_to_shape = mapmatching.map_trip_to_shape
-        map_service_to_route = mapmatching.map_service_to_route
+        map_trip_to_route = mapmatching.map_trip_to_route
+        #map_service_to_route = mapmatching.map_service_to_route
         get_id_gpstrip = gpstrips.ids_sumo.get_id_from_index
         stopnames = net.ptstops.stopnames
         
@@ -7341,54 +8242,76 @@ class GtfsServiceGenerator(Process):
         id_service_counter = 0
         # maps stop sequences to a unique service ID
         # which is different from the GTFS service ID
-        stopsequence_to_services = {}
+        #stopsequence_to_services = {}
+        
+        # this list records tuples of (id_route, time_start) in order to
+        # used to avoid that multiple buses do the same route at the same time!
+        routes_used = []
         for id_service, ids_trip in mapmatching.map_service_to_trips.iteritems():
             print '-'*70
             print 'id_service',id_service
+            
             schedules=[]# contains all trip data of a service
-            for id_trip in ids_trip:
-                #print '  time',trip_times[id_trip][0],'\t id_stop',trip_stops[id_trip][0],id_trip
-                hs,ms,ss = trip_times[id_trip][0].split(':')
-                time_start = int(hs)*3600+int(ms)*60+int(ss)
-                schedules.append((time_start,id_trip))
-            
-            ############
-            schedules.sort()
-            
-            
-            
-            
-            for time_start,id_trip in schedules:
-                
-                
-                
-                # attention, not all stops may have been successfully created
-                ids_simstop = []
-                for id_stop in trip_stops[id_trip]:
-                    if stopnames.has_index(id_stop):
-                        ids_simstop.append(stopnames.get_id_from_index(id_stop))
-                
-                
-                linename = '%s_%s'%(map_service_to_route[id_service], id_trip)
-                id_gpstrip = get_id_gpstrip(map_trip_to_shape[id_trip])
-            
-                ids_edge = ids_edges_shape[gpstrips.ids_route_matched[id_gpstrip]]
-                
-                
-                id_line = ptlines.make(linename = linename, 
-                                    time_begin = time_start,
-                                    time_end = time_start+1,# one off service
-                                    period = 10**8,# infinite
-                                    time_dwell= self.time_dwell,
-                                    ids_stop= ids_simstop,
-                                    ids_edge= ids_edge,
-                                    id_vtype= gpstrips.ids_vtype[id_gpstrip],
-                                    )
+            if id_service in ids_service_valid:
+                for id_trip in ids_trip:
+                    id_route = map_trip_to_route[id_trip]
+                    print '  linename=%s_%s'%(id_route, id_trip),',time',trip_times[id_trip][0],'\t id_stop',trip_stops[id_trip][0],id_trip
+                    #print '    len(trip_times[id_trip])',len(trip_times[id_trip]),'len(trip_stops[id_trip])',len(trip_stops[id_trip])
+                    
+                    if (len(trip_times[id_trip])>1):
+                        hs,ms,ss = trip_times[id_trip][0].split(':')
+                        hs = int(hs)
+                        print '    hs,ms,ss',hs,ms,ss,'time_start',int(hs)*3600+int(ms)*60+int(ss)
+                        if (hs >= self.hour_begin)&(hs<self.hour_end):
+                            time_start = int(hs)*3600+int(ms)*60+int(ss)
+                            if (id_route,time_start) not in routes_used:
+                                times_stops = []
+                                ids_simstop = []
+                                for id_stop, timestr in zip(trip_stops[id_trip], trip_times[id_trip]):
+                                    # attention, not all stops may have been successfully created
+                                    if stopnames.has_index(id_stop):
+                                        ids_simstop.append(stopnames.get_id_from_index(id_stop))
+                                        hs,ms,ss = timestr.split(':')
+                                        times_stops.append(int(hs)*3600+int(ms)*60+int(ss))
+                                routes_used.append((id_route,time_start))
+                                schedules.append((time_start,id_route,id_trip,ids_simstop,times_stops))
                         
-                print '  scheduled',linename,"start%d"%time_start,'id_stop',trip_stops[id_trip][0],'id_gpstrip',id_gpstrip,'id_gpsroute',gpstrips.ids_route_matched[id_gpstrip]
-                print '        ids_simstop',ids_simstop
-                print '        ids_edge',ids_edge
-        
+                ############
+                schedules.sort()
+                
+                
+                
+                
+                for time_start,id_route, id_trip,ids_simstop,times_stop  in schedules:
+                    if len(ids_simstop) >= 2: # at least 2 stops
+                        #linename = '%s_%s'%(map_service_to_route[id_service], id_trip)
+                        linename = '%s_%s'%(id_route,id_trip)
+                        id_gpstrip = get_id_gpstrip(map_trip_to_shape[id_trip])
+                    
+                        ids_edge = ids_edges_shape[gpstrips.ids_route_matched[id_gpstrip]]
+                        
+                        # corrrect pt route matching problems
+                        id_vtype = gpstrips.ids_vtype[id_gpstrip]
+                        id_mode = vtypes.ids_mode[id_vtype]
+                        
+                        ids_edge = self.correct_route(list(ids_simstop), ids_edge, net, fstarmap[id_mode], distancesmap[id_mode])
+                        
+                            
+                        id_line = ptlines.make(linename = linename, 
+                                            time_begin = times_stop[0]-self.time_dwell,
+                                            time_end = times_stop[0],# one off service
+                                            period = 10**8,# infinite
+                                            time_dwell= self.time_dwell,
+                                            ids_stop= ids_simstop,
+                                            ids_edge= ids_edge,
+                                            times_stop = times_stop,
+                                            id_vtype= gpstrips.ids_vtype[id_gpstrip],
+                                            )
+                                
+                        print '  scheduled',linename,"start%d"%time_start,'id_stop',trip_stops[id_trip][0],'id_gpstrip',id_gpstrip,'id_gpsroute',gpstrips.ids_route_matched[id_gpstrip]
+                        #print '        ids_simstop',ids_simstop
+                        #print '        ids_edge',ids_edge
+            
         
             
         return True
@@ -7453,7 +8376,23 @@ class GpsTrips(Trips):
                                     unit = 'm',
                                     info = 'Distance measure with GPS points.',
                                     )) 
-        
+                                    
+        self.add_col(am.ArrayConf('positive_elevations', default = 0.0,
+                                    dtype = np.float32,
+                                    groupnames = ['parameters','gps'], 
+                                    name = 'Positive Elevation',
+                                    symbol = 'Pos. Elev.',
+                                    unit = 'm',
+                                    info = 'Total positive elevation of trip.',
+                                    )) 
+        self.add_col(am.ArrayConf('negative_elevations', default = 0.0,
+                                    dtype = np.float32,
+                                    groupnames = ['parameters','gps'], 
+                                    name = 'Negative Elevation',
+                                    symbol = 'Neg. Elev.',
+                                    unit = 'm',
+                                    info = 'Total negative elevation of trip.',
+                                    )) 
 
         self.add_col(am.ArrayConf('speeds_average', default = 0.0,
                                     dtype = np.float32,
@@ -7492,6 +8431,9 @@ class GpsTrips(Trips):
                                     name = 'Purpose',
                                     info = 'Trip purpose ID',
                                     )) 
+                                    
+        
+
                                     
         self.add_col(am.ArrayConf('ids_device', default = DEVICES['unknown'],
                                     dtype = np.int32,
@@ -7621,7 +8563,14 @@ class GpsTrips(Trips):
                                     info = 'Length of the matched part of the GPS trace. Note the only a fraction of the GPS trace ma be within the given network.',
                                     ))
                                                                                             
-        
+        self.add_col(am.ArrayConf('lengths_route_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Matched length in contrary direction',
+                                    symbol = 'L match contr',
+                                    unit = 'm',
+                                    info = 'Length of the matched part of the GPS trace in the contrary direction. Note the only a fraction of the GPS trace ma be within the given network.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('lengthindexes', default = -1.0,
                                     dtype = np.float32,
@@ -7669,7 +8618,23 @@ class GpsTrips(Trips):
                                         info = "This is a list of GPS point IDs which represent the last point associated with each matched edge.",   
                                         )) 
         
-        
+        self.add_col(am.IdlistsArrayConf( 'edges_list_dyn', self.parent.points,
+                                        groupnames = ['results','_private'], 
+                                        name = 'Traveled edges with the dyna analysis', 
+                                        info = "Traveled edges with the dyna analysis.",   
+                                        )) 
+                                        
+        self.add_col(am.IdlistsArrayConf( 'connections_list_dyn', self.parent.points,
+                                        groupnames = ['results','_private'], 
+                                        name = 'Traveled connections with the dyna analysis', 
+                                        info = "Traveled connections with the dyna analysis.",   
+                                        )) 
+                                        
+        self.add_col(am.IdlistsArrayConf( 'nodes_list_dyn', self.parent.points,
+                                        groupnames = ['results','_private'], 
+                                        name = 'Traveled nodes with the dyna analysis', 
+                                        info = "Traveled nodes with the dyna analysis",   
+                                        )) 
                                         
         # update
         self.ids_points_edgeend.add_groupnames(['_private'])
@@ -7726,6 +8691,7 @@ class GpsTrips(Trips):
                                     length_matched = 0.0,
                                     length_route_mixed = 0.0,
                                     length_route_exclusive = 0.0,
+                                    length_route_contrary = 0.0,
                                     duration_matched = 0.0,
                                     lengthindex = -1.0,
                                     error_dist = -1.0,
@@ -7775,6 +8741,7 @@ class GpsTrips(Trips):
                         lengths_route_matched = length_matched,
                         lengths_route_matched_mixed = length_route_mixed,
                         lengths_route_matched_exclusive = length_route_exclusive,
+                        lengths_route_matched_contrary = length_route_contrary,
                         lengthindexes = 100*lengthindex,
                         errors_dist = 1000* error_dist,
                         times_computation = 1000*comptime,
@@ -8517,8 +9484,26 @@ class GpsPersons(am.ArrayObjman):
                                     groupnames = ['parameters'], 
                                     name = 'Birth year',
                                     info = 'Year when person has been born.',
-                                    ))                                     
-        
+                                    ))  
+
+        self.add_col(am.ArrayConf('home_zips', default = -1,
+                                    dtype = np.int32,
+                                    groupnames = ['parameters'], 
+                                    name = 'Home zips',
+                                    info = 'ZIP code of the home of the cyclists',
+                                    )) 
+        self.add_col(am.ArrayConf('school_zips', default = -1,
+                                    dtype = np.int32,
+                                    groupnames = ['parameters'], 
+                                    name = 'School zips',
+                                    info = 'ZIP code of the school of the cyclists',
+                                    ))
+        self.add_col(am.ArrayConf('work_zips', default = -1,
+                                    dtype = np.int32,
+                                    groupnames = ['parameters'], 
+                                    name = 'Work zips',
+                                    info = 'ZIP code of the work place of the cyclists',
+                                    ))
         self.add_col(am.ArrayConf('ids_occupation', default = OCCUPATIONS['unknown'],
                                     dtype = np.int32,
                                     choices = OCCUPATIONS,
@@ -8533,28 +9518,9 @@ class GpsPersons(am.ArrayObjman):
                                     name = 'frequent user',
                                     info = 'If true, this person is a frequent user of the recorded transport mode.',
                                     ))  
-        
-        # change from int ti string
-        #print 'GpsPersons.versio,',self.get_version(),self.get_version()<0.2
-        
-        
-        if hasattr(self,'zips'):
-                #print '  zips',self.zips.get_value().dtype,self.zips.get_value()
-                if self.zips.get_value().dtype in [np.dtype(np.int32),np.dtype(np.int64)]:
-                    print 'WARNING: delete old person.zips'
-                    self.delete('zips')
-                                        
-        #if self.get_version()<0.2:
-        #    #if hasattr(self,'zips'):
-        #   self.delete('zips')
-            
-        self.add_col(am.ArrayConf('zips', '',
-                                    dtype = np.object,
-                                    groupnames = ['parameters'], 
-                                    name = 'ZIP',
-                                    info = "ZIP code of person's home.",
-                                    )) 
                                     
+            
+
         self.add_col(am.IdlistsArrayConf( 'ids_trips', trips,
                                         #groupnames = ['_private'], 
                                         name = 'Trip IDs', 
@@ -8801,10 +9767,10 @@ class GpsPersons(am.ArrayObjman):
             
             
             gender = kwargs.get('gender','').lower()
-            if gender in ['m','male']:
+            if gender in ['m','male','Male']:
                 #print '  m gender=*%s*'%gender
                 id_gender = GENDERS['male']
-            elif gender in ['f','female']:
+            elif gender in ['f','female','Female']:
                 #print '  f gender=*%s*'%gender
                 id_gender = GENDERS['female']
             else:
@@ -8825,7 +9791,15 @@ class GpsPersons(am.ArrayObjman):
                                     years_birth= kwargs.get('year_birth',None),
                                     ids_occupation= id_occupation,
                                     are_frequent_user= kwargs.get('is_frequent_user',None),
-                                    zips= kwargs.get('zip',None),
+									incomes= kwargs.get('income',None),
+									ethnicities= kwargs.get('ethnicity',None),
+									home_zips= kwargs.get('home_zip',None),
+									school_zips= kwargs.get('school_zip',None),
+									work_zips= kwargs.get('work_zip',None),
+									cycling_frequencies= kwargs.get('cycling_frequency',None),
+									cycling_histories= kwargs.get('cycling_history',None),
+									cyclist_types= kwargs.get('cyclist_type',None),
+									ages_strava= kwargs.get('age_strava',None),
                                     )
             if id_trip>=0:
                 self.ids_trips[id_pers] = [id_trip]
@@ -8842,7 +9816,7 @@ class GpsPersons(am.ArrayObjman):
 
 
 class Mapmatching(DemandobjMixin, cm.BaseObjman):
-        def __init__(   self, ident, demand=None,
+        def __init__(   self, ident='mapmatching', demand = None,
                         name = 'Mapmatching', info ='Mapmatching functionality.',
                         **kwargs):
 
@@ -8870,7 +9844,7 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
         
             
         def _init_attributes(self):
-            print 'Mapmatching._init_attributes'
+            #print 'Mapmatching._init_attributes'
             attrsman = self.get_attrsman()
             
             self.points = attrsman.add( cm.ObjConf(GpsPoints('points',self)))
@@ -8885,9 +9859,10 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
             self._distancesmap = None
             self._timesmap = None
             self._accesslevelsmap = None
+            self._fstarmap = None
             
             attrsman = self.get_attrsman()
-            attrsman.do_not_save_attrs(['_segvertices_xy','_proj','_distancesmap','_timesmap','_accesslevelsmap'])
+            attrsman.do_not_save_attrs(['_segvertices_xy','_proj','_distancesmap','_timesmap','_accesslevelsmap','_fstarmap'])
         
         
         def clear_routes(self):
@@ -8909,15 +9884,38 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
                         points.del_rows(ids_point)
                 trips.del_rows(ids_del) 
             else:
-                for ids_trip in persons.ids_trips[persons.get_ids()]:
-                    if ids_trip is not None:
-                        ids_del =  np.array(ids_trip, dtype = np.int32)[np.logical_not(trips.are_selected[ids_trip])]
-                        for id_del,ids_point in zip(ids_del,trips.ids_points[ids_del]):
-                            ids_trip.remove(id_del)
-                            if ids_point is not None:
-                                points.del_rows(ids_point)
-                        
-                        trips.del_rows(ids_del) 
+##                for ids_trip in persons.ids_trips[persons.get_ids()]:
+##                    if ids_trip is not None:
+##                        ids_del =  np.array(ids_trip, dtype = np.int32)[np.logical_not(trips.are_selected[ids_trip])]
+##                        for id_del,ids_point in zip(ids_del,trips.ids_points[ids_del]):
+##                            ids_trip.remove(id_del)
+##                            if ids_point is not None:
+##                                points.del_rows(ids_point)
+##                        
+##                        trips.del_rows(ids_del) 
+                ids_del = trips.get_ids()[(trips.are_selected[trips.get_ids()] == False)]
+                del_pers = []
+                trips_pers = []
+                for ids_trip, id_person in zip(persons.ids_trips[persons.get_ids()], persons.get_ids()):
+                    for id_trip in ids_trip:
+                        if trips.are_selected[id_trip] == True:
+                           trips_pers.append(id_trip)
+                    persons.ids_trips[id_person] = trips_pers
+                    if trips_pers == []:
+                        del_pers.append(id_person)
+                    trips_pers = []
+
+                ids_points = points.get_ids()
+                del_points = np.zeros(np.max(ids_points)+1, dtype = np.int32) 
+                for id_del in ids_del:
+                    ids_point_del = trips.ids_points[id_del]
+                    del_points[ids_point_del] = ids_point_del
+                points.del_rows(del_points[(del_points >0)])
+                                                 
+                trips.del_rows(ids_del)
+                persons.del_rows(del_pers)
+
+
             
         def get_proj_and_offset(self):
             if self._proj is None:
@@ -8967,7 +9965,7 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
             #print '  len(self._distancesmap)',len(self._distancesmap)
             return  self._timesmap 
         
-        def get_distancesmap(self, is_check_lanes = False,):
+        def get_distancesmap(self, is_check_lanes = False, ids_mode = None):
             """
             Returns a dictionary where key is id_mode and
             value is a distance-lookup table, mapping id_edge to edge distance
@@ -8976,11 +9974,11 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
             
             
             if self._distancesmap is None:
-                
-                vtypes = self.get_scenario().demand.vtypes
                 edges = self.get_scenario().net.edges
-                ids_vtype = self.trips.ids_vtype[self.trips.get_ids()]
-                ids_mode = vtypes.ids_mode[ids_vtype]
+                if ids_mode is None:
+                    vtypes = self.get_scenario().demand.vtypes
+                    ids_vtype = self.trips.ids_vtype[self.trips.get_ids()]
+                    ids_mode = vtypes.ids_mode[ids_vtype]
                 print '    ids_mode',set(ids_mode),len(ids_mode)
             
                 self._distancesmap = {}
@@ -8995,8 +9993,36 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
             #print '  len(self._distancesmap)',len(self._distancesmap)
             return  self._distancesmap    
                                                      
-         
-        def get_accesslevelsmap(self):
+        def get_fstarmap(self, ids_mode = None, is_return_arrays = True, is_ignor_connections = False):
+            """
+            Returns a dictionary where key is id_mode and
+            value is the corrisponding fstar.
+            """
+            print 'get_fstarmap',self._fstarmap is None
+            
+            
+            if self._fstarmap is None:
+                edges = self.get_scenario().net.edges
+                if ids_mode is None:
+                    vtypes = self.get_scenario().demand.vtypes
+                    ids_vtype = self.trips.ids_vtype[self.trips.get_ids()]
+                    ids_mode = vtypes.ids_mode[ids_vtype]
+                print '    ids_mode',set(ids_mode),len(ids_mode)
+            
+                self._fstarmap = {}
+                for id_mode in set(ids_mode):
+                    #ids_vtype_mode = vtypes.select_by_mode(id_mode)
+                    
+                    self._fstarmap[id_mode] = edges.get_fstar(  id_mode = id_mode,
+                                                                is_ignor_connections = is_ignor_connections,
+                                                                is_return_arrays = is_return_arrays,
+                                                            )
+                    
+                    
+            #print '  len(self._distancesmap)',len(self._distancesmap)
+            return  self._fstarmap    
+                                          
+        def get_accesslevelsmap(self, ids_mode = None):
             
             """
             Returns a dictionary where key is id_mode and
@@ -9004,10 +10030,13 @@ class Mapmatching(DemandobjMixin, cm.BaseObjman):
             """
             
             if self._accesslevelsmap is None:
-                vtypes = self.get_scenario().demand.vtypes
                 edges = self.get_scenario().net.edges
-                ids_vtype = self.trips.ids_vtype[self.trips.get_ids()]
-                ids_mode = vtypes.ids_mode[ids_vtype]
+                if ids_mode is None:
+                    vtypes = self.get_scenario().demand.vtypes
+                    ids_vtype = self.trips.ids_vtype[self.trips.get_ids()]
+                    ids_mode = vtypes.ids_mode[ids_vtype]
+                print '    ids_mode',set(ids_mode),len(ids_mode)
+                
             
             
                 self._accesslevelsmap = {}
@@ -9228,6 +10257,15 @@ class Nodesresults(am.ArrayObjman):
                                     name = 'number u-turns at node',
                                     info = 'Number of u-turns at node. ',
                                     )) 
+                                    
+        self.add_col(am.ListArrayConf('list_waiting_times', 
+                                    groupnames = ['results'],
+                                    perm='rw', 
+                                    name = 'Waiting times',
+                                    unit = 's',
+                                    info = 'List of waiting times registered in this intersection.',
+                                    ))
+
     
     def get_nodes_significant(self, ids_node_raw = None, 
                                 n_lane_in_min =2, n_lane_out_min = 2):
@@ -9571,13 +10609,13 @@ class Connectionsresults(am.ArrayObjman):
         
          
        
-                                                                       
-        self.add_col(am.IdsArrayConf( 'ids_connection', parent.get_scenario().net.edges, 
-                                            groupnames = ['state'], 
-                                            is_index = True,
-                                            name = 'connection ID', 
-                                            info = 'ID of network connection.',
-                                            ))
+        if parent != None:                                                               
+            self.add_col(am.IdsArrayConf( 'ids_connection', parent.get_scenario().net.edges, 
+                                                groupnames = ['state'], 
+                                                is_index = True,
+                                                name = 'connection ID', 
+                                                info = 'ID of network connection.',
+                                                ))
         self._init_attributes()
     
     
@@ -9757,6 +10795,14 @@ class Connectionsresults(am.ArrayObjman):
                                     info = 'Direct length between the start and the end of the intersection.',
                                     )) 
                                     
+        self.add_col(am.ListArrayConf('list_waiting_times', 
+                                    groupnames = ['results'],
+                                    perm='rw', 
+                                    name = 'Waiting times',
+                                    unit = 's',
+                                    info = 'List of waiting times registered in this connection.',
+                                    ))
+                                    
     def init_for_connections(self, connections):
         """
         Initializes a row for connection edge ID in routes
@@ -9887,6 +10933,15 @@ class Routesresults(am.ArrayObjman):
                                     info = 'Length of roads with exclusive access.',
                                     ))
         
+        self.add_col(am.ArrayConf('lengths_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Length contrary direction',
+                                    symbol = 'L contr',
+                                    unit = 'm',
+                                    info = 'Length of roads in the contrary direction.',
+                                    ))
+                                    
         self.add_col(am.ArrayConf('lengths_low_priority', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -11235,7 +12290,7 @@ class CyclistsDatabase(am.ArrayObjman):
                                     info = 'Total number of correctly matched GPS traces from the person.',
                                     ))
                                     
-        self.add_col(am.ArrayConf('n_dyn_atrips', 0,
+        self.add_col(am.ArrayConf('n_dyn_trips', 0,
                                     dtype = np.int32,
                                     groupnames = ['results'], 
                                     name = 'N Dyn',
@@ -11347,6 +12402,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     unit = '%',
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
+                                    
+        self.add_col(am.ArrayConf('AV_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in contrary direction path',
+                                    symbol = 'AV Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in a contrary-direction bike path',
+                                    ))
                                     
         self.add_col(am.ArrayConf('AV_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -11473,6 +12537,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
                                     )) 
+                                    
+        self.add_col(am.ArrayConf('AV_shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only Contrary-direction links',
+                                    symbol = 'AV Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary direction roads in the matched length minus share of contrary direction roads in the shortest length.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('AV_shortest_vs_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -11825,6 +12898,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
                                     
+        self.add_col(am.ArrayConf('WL_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in contrary direction path',
+                                    symbol = 'WL Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in a contrary-direction bike path',
+                                    ))
+                                    
         self.add_col(am.ArrayConf('WL_matched_mixed', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -11949,7 +13031,16 @@ class CyclistsDatabase(am.ArrayObjman):
                                     symbol = 'WL Share Excl match vs short',
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
-                                    )) 
+                                    ))
+                                    
+        self.add_col(am.ArrayConf('WL_shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only Contrary-direction links',
+                                    symbol = 'WL Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary direction roads in the matched length minus share of contrary direction roads in the shortest length.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('WL_shortest_vs_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -12303,6 +13394,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
                                     
+        self.add_col(am.ArrayConf('MD_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in contrary direction path',
+                                    symbol = 'MD Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in a contrary-direction bike path',
+                                    ))
+                                    
         self.add_col(am.ArrayConf('MD_matched_mixed', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -12428,6 +13528,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
                                     )) 
+                                    
+        self.add_col(am.ArrayConf('MD_shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only Contrary-direction links',
+                                    symbol = 'MD Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary direction roads in the matched length minus share of contrary direction roads in the shortest length.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('MD_shortest_vs_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -12780,6 +13889,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
                                     
+        self.add_col(am.ArrayConf('SD_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in contrary direction path',
+                                    symbol = 'SD Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in a contrary-direction bike path',
+                                    ))
+                                    
         self.add_col(am.ArrayConf('SD_matched_mixed', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -12905,6 +14023,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
                                     )) 
+                                    
+        self.add_col(am.ArrayConf('SD_shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only Contrary-direction links',
+                                    symbol = 'SD Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary direction roads in the matched length minus share of contrary direction roads in the shortest length.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('SD_shortest_vs_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -13258,6 +14385,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
                                     
+        self.add_col(am.ArrayConf('MA_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in contrary direction path',
+                                    symbol = 'MA Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in a contrary-direction bike path',
+                                    ))
+                                    
         self.add_col(am.ArrayConf('MA_matched_mixed', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -13383,6 +14519,15 @@ class CyclistsDatabase(am.ArrayObjman):
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
                                     )) 
+                                    
+        self.add_col(am.ArrayConf('MA_shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only Contrary-direction links',
+                                    symbol = 'MA Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary direction roads in the matched length minus share of contrary direction roads in the shortest length.',
+                                    ))
                                     
         self.add_col(am.ArrayConf('MA_shortest_vs_matched_mixed', default = -1.0,
                                     dtype = np.float32,
@@ -13702,7 +14847,7 @@ class CyclistsDatabaseAnalyzer(Process):
                             parent = mapmatching,
                             name = 'Cyclists Database Analyzer', 
                             logger = logger,
-                            info =""" ...
+                            info =""" Elaborated analysis of the GPS persons
                             """
                             )
         
@@ -13760,6 +14905,7 @@ class CyclistsDatabaseAnalyzer(Process):
         AV_speeds_av_matched = np.zeros(len(ids_person))
         AV_numbers_prioritychange = np.zeros(len(ids_person))
         AV_matched_exclusive = np.zeros(len(ids_person))
+        AV_matched_contrary = np.zeros(len(ids_person))
         AV_matched_mixed = np.zeros(len(ids_person))
         AV_matched_lowpriority = np.zeros(len(ids_person))
         AV_matched_nodes = np.zeros(len(ids_person))
@@ -13774,6 +14920,7 @@ class CyclistsDatabaseAnalyzer(Process):
         AV_shortest_length = np.zeros(len(ids_person))
         AV_shortest_vs_matched_numbers_prioritychange = np.zeros(len(ids_person))
         AV_shortest_vs_matched_exclusive = np.zeros(len(ids_person))
+        AV_shortest_vs_matched_contrary = np.zeros(len(ids_person))
         AV_shortest_vs_matched_mixed = np.zeros(len(ids_person))
         AV_shortest_vs_matched_lowpriority = np.zeros(len(ids_person))
         AV_shortest_vs_matched_nodes = np.zeros(len(ids_person))
@@ -13815,6 +14962,7 @@ class CyclistsDatabaseAnalyzer(Process):
         WL_speeds_av_matched = np.zeros(len(ids_person))
         WL_numbers_prioritychange = np.zeros(len(ids_person))
         WL_matched_exclusive = np.zeros(len(ids_person))
+        WL_matched_contrary = np.zeros(len(ids_person))
         WL_matched_mixed =  np.zeros(len(ids_person))
         WL_matched_lowpriority = np.zeros(len(ids_person))
         WL_matched_nodes = np.zeros(len(ids_person))
@@ -13829,6 +14977,7 @@ class CyclistsDatabaseAnalyzer(Process):
         WL_shortest_length = np.zeros(len(ids_person))
         WL_shortest_vs_matched_numbers_prioritychange = np.zeros(len(ids_person))
         WL_shortest_vs_matched_exclusive = np.zeros(len(ids_person))
+        WL_shortest_vs_matched_contrary = np.zeros(len(ids_person))
         WL_shortest_vs_matched_mixed = np.zeros(len(ids_person))
         WL_shortest_vs_matched_lowpriority = np.zeros(len(ids_person))
         WL_shortest_vs_matched_nodes = np.zeros(len(ids_person))
@@ -13869,6 +15018,7 @@ class CyclistsDatabaseAnalyzer(Process):
         MD_speeds_av_matched = np.zeros(len(ids_person))
         MD_numbers_prioritychange = np.zeros(len(ids_person))
         MD_matched_exclusive = np.zeros(len(ids_person))
+        MD_matched_contrary = np.zeros(len(ids_person))
         MD_matched_mixed = np.zeros(len(ids_person))
         MD_matched_lowpriority = np.zeros(len(ids_person))
         MD_matched_nodes = np.zeros(len(ids_person))
@@ -13883,6 +15033,7 @@ class CyclistsDatabaseAnalyzer(Process):
         MD_shortest_length = np.zeros(len(ids_person))
         MD_shortest_vs_matched_numbers_prioritychange = np.zeros(len(ids_person))
         MD_shortest_vs_matched_exclusive = np.zeros(len(ids_person))
+        MD_shortest_vs_matched_contrary = np.zeros(len(ids_person))
         MD_shortest_vs_matched_mixed = np.zeros(len(ids_person))
         MD_shortest_vs_matched_lowpriority = np.zeros(len(ids_person))
         MD_shortest_vs_matched_nodes = np.zeros(len(ids_person))
@@ -13923,6 +15074,7 @@ class CyclistsDatabaseAnalyzer(Process):
         SD_speeds_av_matched = np.zeros(len(ids_person))
         SD_numbers_prioritychange = np.zeros(len(ids_person))
         SD_matched_exclusive = np.zeros(len(ids_person))
+        SD_matched_contrary = np.zeros(len(ids_person))
         SD_matched_mixed = np.zeros(len(ids_person))
         SD_matched_lowpriority = np.zeros(len(ids_person))
         SD_matched_nodes = np.zeros(len(ids_person))
@@ -13937,6 +15089,7 @@ class CyclistsDatabaseAnalyzer(Process):
         SD_shortest_length = np.zeros(len(ids_person))
         SD_shortest_vs_matched_numbers_prioritychange = np.zeros(len(ids_person))
         SD_shortest_vs_matched_exclusive = np.zeros(len(ids_person))
+        SD_shortest_vs_matched_contrary = np.zeros(len(ids_person))
         SD_shortest_vs_matched_mixed = np.zeros(len(ids_person))
         SD_shortest_vs_matched_lowpriority = np.zeros(len(ids_person))
         SD_shortest_vs_matched_nodes = np.zeros(len(ids_person))
@@ -13977,6 +15130,7 @@ class CyclistsDatabaseAnalyzer(Process):
         MA_speeds_av_matched = np.zeros(len(ids_person))
         MA_numbers_prioritychange = np.zeros(len(ids_person))
         MA_matched_exclusive = np.zeros(len(ids_person))
+        MA_matched_contrary = np.zeros(len(ids_person))
         MA_matched_mixed = np.zeros(len(ids_person))
         MA_matched_lowpriority = np.zeros(len(ids_person))
         MA_matched_nodes = np.zeros(len(ids_person))
@@ -13991,6 +15145,7 @@ class CyclistsDatabaseAnalyzer(Process):
         MA_shortest_length = np.zeros(len(ids_person))
         MA_shortest_vs_matched_numbers_prioritychange = np.zeros(len(ids_person))
         MA_shortest_vs_matched_exclusive = np.zeros(len(ids_person))
+        MA_shortest_vs_matched_contrary = np.zeros(len(ids_person))
         MA_shortest_vs_matched_mixed = np.zeros(len(ids_person))
         MA_shortest_vs_matched_lowpriority = np.zeros(len(ids_person)) 
         MA_shortest_vs_matched_nodes = np.zeros(len(ids_person))
@@ -14075,6 +15230,7 @@ class CyclistsDatabaseAnalyzer(Process):
             AV_speeds_av_matched[i] = np.mean(tripsdatabase.speeds_av_matched[ids_tripsdatabase_pers])
             AV_numbers_prioritychange[i] = np.mean(tripsdatabase.numbers_prioritychange[ids_tripsdatabase_pers])
             AV_matched_exclusive[i] = np.mean(tripsdatabase.matched_exclusive[ids_tripsdatabase_pers])
+            AV_matched_contrary[i] = np.mean(tripsdatabase.matched_contrary[ids_tripsdatabase_pers])
             AV_matched_mixed[i] = np.mean(tripsdatabase.matched_mixed[ids_tripsdatabase_pers])
             AV_matched_lowpriority[i] = np.mean(tripsdatabase.matched_lowpriority[ids_tripsdatabase_pers])
             AV_matched_nodes[i] = np.mean(tripsdatabase.matched_nodes[ids_tripsdatabase_pers])
@@ -14088,6 +15244,7 @@ class CyclistsDatabaseAnalyzer(Process):
             AV_av_n_connections_per_node[i] = np.mean(tripsdatabase.av_n_connections_per_node[ids_tripsdatabase_pers])
             AV_shortest_length[i] = np.mean(tripsdatabase.shortest_length[ids_tripsdatabase_pers])
             AV_shortest_vs_matched_exclusive[i] = np.mean(tripsdatabase.shortest_vs_matched_exclusive[ids_tripsdatabase_pers])
+            AV_shortest_vs_matched_contrary[i] = np.mean(tripsdatabase.shortest_vs_matched_contrary[ids_tripsdatabase_pers])
             AV_shortest_vs_matched_numbers_prioritychange[i] = np.mean(tripsdatabase.shortest_vs_matched_numbers_prioritychange[ids_tripsdatabase_pers])
             AV_shortest_vs_matched_mixed[i] = np.mean(tripsdatabase.shortest_vs_matched_mixed[ids_tripsdatabase_pers])
             AV_shortest_vs_matched_lowpriority[i] = np.mean(tripsdatabase.shortest_vs_matched_lowpriority[ids_tripsdatabase_pers])
@@ -14185,6 +15342,7 @@ class CyclistsDatabaseAnalyzer(Process):
             WL_speeds_av_matched[i] = np.sum(tripsdatabase.speeds_av_matched[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_numbers_prioritychange[i] = np.sum(tripsdatabase.numbers_prioritychange[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_matched_exclusive[i] = np.sum(tripsdatabase.matched_exclusive[ids_tripsdatabase_pers]*lengths)/total_lengths
+            WL_matched_contrary[i] = np.sum(tripsdatabase.matched_contrary[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_matched_mixed[i] =  np.sum(tripsdatabase.matched_mixed[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_matched_lowpriority[i] = np.sum(tripsdatabase.matched_lowpriority[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_matched_nodes[i] = np.sum(tripsdatabase.matched_nodes[ids_tripsdatabase_pers]*lengths)/total_lengths
@@ -14199,6 +15357,7 @@ class CyclistsDatabaseAnalyzer(Process):
             WL_shortest_length[i] = np.sum(tripsdatabase.shortest_length[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_shortest_vs_matched_numbers_prioritychange[i] = np.sum(tripsdatabase.shortest_vs_matched_numbers_prioritychange[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_shortest_vs_matched_exclusive[i] = np.sum(tripsdatabase.shortest_vs_matched_exclusive[ids_tripsdatabase_pers]*lengths)/total_lengths
+            WL_shortest_vs_matched_contrary[i] = np.sum(tripsdatabase.shortest_vs_matched_contrary[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_shortest_vs_matched_mixed[i] = np.sum(tripsdatabase.shortest_vs_matched_mixed[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_shortest_vs_matched_lowpriority[i] = np.sum(tripsdatabase.shortest_vs_matched_lowpriority[ids_tripsdatabase_pers]*lengths)/total_lengths
             WL_shortest_vs_matched_nodes[i] = np.sum(tripsdatabase.shortest_vs_matched_nodes[ids_tripsdatabase_pers]*lengths)/total_lengths
@@ -14294,6 +15453,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MD_speeds_av_matched[i] = np.median(tripsdatabase.speeds_av_matched[ids_tripsdatabase_pers])
             MD_numbers_prioritychange[i] = np.median(tripsdatabase.numbers_prioritychange[ids_tripsdatabase_pers])
             MD_matched_exclusive[i] = np.median(tripsdatabase.matched_exclusive[ids_tripsdatabase_pers])
+            MD_matched_contrary[i] = np.median(tripsdatabase.matched_contrary[ids_tripsdatabase_pers])
             MD_matched_mixed[i] = np.median(tripsdatabase.matched_mixed[ids_tripsdatabase_pers])
             MD_matched_lowpriority[i] = np.median(tripsdatabase.matched_lowpriority[ids_tripsdatabase_pers])
             MD_matched_nodes[i] = np.median(tripsdatabase.matched_nodes[ids_tripsdatabase_pers])
@@ -14308,6 +15468,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MD_shortest_length[i] = np.median(tripsdatabase.shortest_length[ids_tripsdatabase_pers])
             MD_shortest_vs_matched_numbers_prioritychange[i] = np.median(tripsdatabase.shortest_vs_matched_numbers_prioritychange[ids_tripsdatabase_pers])
             MD_shortest_vs_matched_exclusive[i] = np.median(tripsdatabase.shortest_vs_matched_exclusive[ids_tripsdatabase_pers])
+            MD_shortest_vs_matched_contrary[i] = np.median(tripsdatabase.shortest_vs_matched_contrary[ids_tripsdatabase_pers])
             MD_shortest_vs_matched_mixed[i] = np.median(tripsdatabase.shortest_vs_matched_mixed[ids_tripsdatabase_pers])
             MD_shortest_vs_matched_lowpriority[i] = np.median(tripsdatabase.shortest_vs_matched_lowpriority[ids_tripsdatabase_pers])
             MD_shortest_vs_matched_nodes[i] = np.median(tripsdatabase.shortest_vs_matched_nodes[ids_tripsdatabase_pers])
@@ -14403,6 +15564,7 @@ class CyclistsDatabaseAnalyzer(Process):
             SD_speeds_av_matched[i] = np.std(tripsdatabase.speeds_av_matched[ids_tripsdatabase_pers])
             SD_numbers_prioritychange[i] = np.std(tripsdatabase.numbers_prioritychange[ids_tripsdatabase_pers])
             SD_matched_exclusive[i] = np.std(tripsdatabase.matched_exclusive[ids_tripsdatabase_pers])
+            SD_matched_contrary[i] = np.std(tripsdatabase.matched_contrary[ids_tripsdatabase_pers])
             SD_matched_mixed[i] = np.std(tripsdatabase.matched_mixed[ids_tripsdatabase_pers])
             SD_matched_lowpriority[i] = np.std(tripsdatabase.matched_lowpriority[ids_tripsdatabase_pers])
             SD_matched_nodes[i] = np.std(tripsdatabase.matched_nodes[ids_tripsdatabase_pers])
@@ -14417,6 +15579,7 @@ class CyclistsDatabaseAnalyzer(Process):
             SD_shortest_length[i] = np.std(tripsdatabase.shortest_length[ids_tripsdatabase_pers])
             SD_shortest_vs_matched_numbers_prioritychange[i] = np.std(tripsdatabase.shortest_vs_matched_numbers_prioritychange[ids_tripsdatabase_pers])
             SD_shortest_vs_matched_exclusive[i] = np.std(tripsdatabase.shortest_vs_matched_exclusive[ids_tripsdatabase_pers])
+            SD_shortest_vs_matched_contrary[i] = np.std(tripsdatabase.shortest_vs_matched_contrary[ids_tripsdatabase_pers])
             SD_shortest_vs_matched_mixed[i] = np.std(tripsdatabase.shortest_vs_matched_mixed[ids_tripsdatabase_pers])
             SD_shortest_vs_matched_lowpriority[i] = np.std(tripsdatabase.shortest_vs_matched_lowpriority[ids_tripsdatabase_pers])
             SD_shortest_vs_matched_nodes[i] = np.std(tripsdatabase.shortest_vs_matched_nodes[ids_tripsdatabase_pers])
@@ -14512,6 +15675,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MA_speeds_av_matched[i] = self.get_average_absolute_difference(tripsdatabase.speeds_av_matched[ids_tripsdatabase_pers])
             MA_numbers_prioritychange[i] = self.get_average_absolute_difference(tripsdatabase.numbers_prioritychange[ids_tripsdatabase_pers])
             MA_matched_exclusive[i] = self.get_average_absolute_difference(tripsdatabase.matched_exclusive[ids_tripsdatabase_pers])
+            MA_matched_contrary[i] = self.get_average_absolute_difference(tripsdatabase.matched_contrary[ids_tripsdatabase_pers])
             MA_matched_mixed[i] = self.get_average_absolute_difference(tripsdatabase.matched_mixed[ids_tripsdatabase_pers])
             MA_matched_lowpriority[i] = self.get_average_absolute_difference(tripsdatabase.matched_lowpriority[ids_tripsdatabase_pers])
             MA_matched_nodes[i] = self.get_average_absolute_difference(tripsdatabase.matched_nodes[ids_tripsdatabase_pers])
@@ -14526,6 +15690,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MA_shortest_length[i] = self.get_average_absolute_difference(tripsdatabase.shortest_length[ids_tripsdatabase_pers])
             MA_shortest_vs_matched_numbers_prioritychange[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_numbers_prioritychange[ids_tripsdatabase_pers])
             MA_shortest_vs_matched_exclusive[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_exclusive[ids_tripsdatabase_pers])
+            MA_shortest_vs_matched_contrary[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_contrary[ids_tripsdatabase_pers])
             MA_shortest_vs_matched_mixed[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_mixed[ids_tripsdatabase_pers])
             MA_shortest_vs_matched_lowpriority[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_lowpriority[ids_tripsdatabase_pers])
             MA_shortest_vs_matched_nodes[i] = self.get_average_absolute_difference(tripsdatabase.shortest_vs_matched_nodes[ids_tripsdatabase_pers])
@@ -14624,7 +15789,7 @@ class CyclistsDatabaseAnalyzer(Process):
             age = age,
             are_frequent_user = are_frequent_user,
             numbers_tot_trip_mached = numbers_tot_trip_mached,
-            n_dyn_atrips = n_dynaanalysis,
+            n_dyn_trips = n_dynaanalysis,
             n_dyn_tls = n_dyn_tls,
             n_dyn_left = n_dyn_left,
             n_dyn_right = n_dyn_right,
@@ -14638,6 +15803,7 @@ class CyclistsDatabaseAnalyzer(Process):
             AV_speeds_av_matched = AV_speeds_av_matched,
             AV_numbers_prioritychange = AV_numbers_prioritychange,
             AV_matched_exclusive = AV_matched_exclusive,
+            AV_matched_contrary = AV_matched_contrary,
             AV_matched_mixed = AV_matched_mixed,
             AV_matched_lowpriority = AV_matched_lowpriority,
             AV_matched_nodes = AV_matched_nodes,
@@ -14652,6 +15818,7 @@ class CyclistsDatabaseAnalyzer(Process):
             AV_shortest_length = AV_shortest_length,
             AV_shortest_vs_matched_numbers_prioritychange = AV_shortest_vs_matched_numbers_prioritychange,
             AV_shortest_vs_matched_exclusive = AV_shortest_vs_matched_exclusive,
+            AV_shortest_vs_matched_contrary = AV_shortest_vs_matched_contrary,
             AV_shortest_vs_matched_mixed = AV_shortest_vs_matched_mixed,
             AV_shortest_vs_matched_lowpriority = AV_shortest_vs_matched_lowpriority,
             AV_shortest_vs_matched_nodes = AV_shortest_vs_matched_nodes,
@@ -14692,6 +15859,7 @@ class CyclistsDatabaseAnalyzer(Process):
             WL_speeds_av_matched = WL_speeds_av_matched,
             WL_numbers_prioritychange = WL_numbers_prioritychange,
             WL_matched_exclusive = WL_matched_exclusive,
+            WL_matched_contrary = WL_matched_contrary,
             WL_matched_mixed = WL_matched_mixed ,
             WL_matched_lowpriority = WL_matched_lowpriority,
             WL_matched_nodes = WL_matched_nodes,
@@ -14706,6 +15874,7 @@ class CyclistsDatabaseAnalyzer(Process):
             WL_shortest_length =WL_shortest_length ,
             WL_shortest_vs_matched_numbers_prioritychange = WL_shortest_vs_matched_numbers_prioritychange,
             WL_shortest_vs_matched_exclusive = WL_shortest_vs_matched_exclusive,
+            WL_shortest_vs_matched_contrary = WL_shortest_vs_matched_contrary,
             WL_shortest_vs_matched_mixed = WL_shortest_vs_matched_mixed,
             WL_shortest_vs_matched_lowpriority = WL_shortest_vs_matched_lowpriority,
             WL_shortest_vs_matched_nodes = WL_shortest_vs_matched_nodes ,
@@ -14746,6 +15915,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MD_speeds_av_matched = MD_speeds_av_matched,
             MD_numbers_prioritychange = MD_numbers_prioritychange,
             MD_matched_exclusive = MD_matched_exclusive,
+            MD_matched_contrary = MD_matched_contrary,
             MD_matched_mixed = MD_matched_mixed,
             MD_matched_lowpriority = MD_matched_lowpriority,
             MD_matched_nodes = MD_matched_nodes,
@@ -14760,6 +15930,7 @@ class CyclistsDatabaseAnalyzer(Process):
             MD_shortest_length = MD_shortest_length,
             MD_shortest_vs_matched_numbers_prioritychange = MD_shortest_vs_matched_numbers_prioritychange,
             MD_shortest_vs_matched_exclusive = MD_shortest_vs_matched_exclusive,
+            MD_shortest_vs_matched_contrary = MD_shortest_vs_matched_contrary,
             MD_shortest_vs_matched_mixed = MD_shortest_vs_matched_mixed,
             MD_shortest_vs_matched_lowpriority = MD_shortest_vs_matched_lowpriority,
             MD_shortest_vs_matched_nodes = MD_shortest_vs_matched_nodes,
@@ -14799,6 +15970,7 @@ class CyclistsDatabaseAnalyzer(Process):
             SD_lengths_within_center = SD_lengths_within_center,
             SD_speeds_av_matched = SD_speeds_av_matched,
             SD_matched_exclusive = SD_matched_exclusive,
+            SD_matched_contrary = SD_matched_contrary,
             SD_numbers_prioritychange = SD_numbers_prioritychange,
             SD_matched_mixed = SD_matched_mixed,
             SD_matched_lowpriority = SD_matched_lowpriority,
@@ -14814,6 +15986,7 @@ class CyclistsDatabaseAnalyzer(Process):
             SD_shortest_length = SD_shortest_length,
             SD_shortest_vs_matched_numbers_prioritychange = SD_shortest_vs_matched_numbers_prioritychange,
             SD_shortest_vs_matched_exclusive = SD_shortest_vs_matched_exclusive,
+            SD_shortest_vs_matched_contrary = SD_shortest_vs_matched_contrary,
             SD_shortest_vs_matched_mixed = SD_shortest_vs_matched_mixed,
             SD_shortest_vs_matched_lowpriority = SD_shortest_vs_matched_lowpriority,
             SD_shortest_vs_matched_nodes = SD_shortest_vs_matched_nodes,
@@ -14849,36 +16022,38 @@ class CyclistsDatabaseAnalyzer(Process):
             SD_real_vs_expected1_waiting_time = SD_real_vs_expected1_waiting_time,
             SD_real_vs_expected2_waiting_time = SD_real_vs_expected2_waiting_time,
             #-------------------------------------------------------------------------------MA MEAN ABSOLUTE DIFFERENCE
-            MA_lengths_route_matched = MA_lengths_route_matched,
-            MA_lengths_within_center = MA_lengths_within_center,
-            MA_speeds_av_matched = MA_speeds_av_matched,
-            MA_numbers_prioritychange = MA_numbers_prioritychange,
-            MA_matched_exclusive =MA_matched_exclusive ,
-            MA_matched_mixed = MA_matched_mixed,
-            MA_matched_lowpriority = MA_matched_lowpriority,
-            MA_matched_nodes = MA_matched_nodes,
-            MA_matched_left_turns = MA_matched_left_turns,
-            MA_matched_right_turns = MA_matched_right_turns,
-            MA_matched_crossings = MA_matched_crossings,
-            MA_matched_tls_nodes = MA_matched_tls_nodes,
-            MA_matched_tls_left_turns = MA_matched_tls_left_turns,
-            MA_matched_tls_right_turns = MA_matched_tls_right_turns,
-            MA_matched_tls_crossings =MA_matched_tls_crossings ,
-            MA_av_n_connections_per_node = MA_av_n_connections_per_node,
-            MA_shortest_length = MA_shortest_length,
-            MA_shortest_vs_matched_numbers_prioritychange = MA_shortest_vs_matched_numbers_prioritychange,
-            MA_shortest_vs_matched_exclusive = MA_shortest_vs_matched_exclusive,
-            MA_shortest_vs_matched_mixed = MA_shortest_vs_matched_mixed,
-            MA_shortest_vs_matched_lowpriority = MA_shortest_vs_matched_lowpriority ,
-            MA_shortest_vs_matched_nodes = MA_shortest_vs_matched_nodes,
-            MA_shortest_vs_matched_left_turns = MA_shortest_vs_matched_left_turns,
-            MA_shortest_vs_matched_right_turns = MA_shortest_vs_matched_right_turns,
-            MA_shortest_vs_matched_crossings = MA_shortest_vs_matched_crossings,
-            MA_shortest_vs_matched_tls_nodes = MA_shortest_vs_matched_tls_nodes ,
-            MA_shortest_vs_matched_tls_left_turns = MA_shortest_vs_matched_tls_left_turns,
-            MA_shortest_vs_matched_tls_right_turns = MA_shortest_vs_matched_tls_right_turns,
-            MA_shortest_vs_matched_tls_crossings = MA_shortest_vs_matched_tls_crossings,
-            MA_shortest_vs_matched_av_n_connections_per_node = MA_shortest_vs_matched_av_n_connections_per_node,
+##            MA_lengths_route_matched = MA_lengths_route_matched,
+##            MA_lengths_within_center = MA_lengths_within_center,
+##            MA_speeds_av_matched = MA_speeds_av_matched,
+##            MA_numbers_prioritychange = MA_numbers_prioritychange,
+##            MA_matched_exclusive =MA_matched_exclusive ,
+##            MA_matched_contrary =MA_matched_contrary ,
+##            MA_matched_mixed = MA_matched_mixed,
+##            MA_matched_lowpriority = MA_matched_lowpriority,
+##            MA_matched_nodes = MA_matched_nodes,
+##            MA_matched_left_turns = MA_matched_left_turns,
+##            MA_matched_right_turns = MA_matched_right_turns,
+##            MA_matched_crossings = MA_matched_crossings,
+##            MA_matched_tls_nodes = MA_matched_tls_nodes,
+##            MA_matched_tls_left_turns = MA_matched_tls_left_turns,
+##            MA_matched_tls_right_turns = MA_matched_tls_right_turns,
+##            MA_matched_tls_crossings =MA_matched_tls_crossings ,
+##            MA_av_n_connections_per_node = MA_av_n_connections_per_node,
+##            MA_shortest_length = MA_shortest_length,
+##            MA_shortest_vs_matched_numbers_prioritychange = MA_shortest_vs_matched_numbers_prioritychange,
+##            MA_shortest_vs_matched_exclusive = MA_shortest_vs_matched_exclusive,
+##            MA_shortest_vs_matched_contrary = MA_shortest_vs_matched_contrary,
+##            MA_shortest_vs_matched_mixed = MA_shortest_vs_matched_mixed,
+##            MA_shortest_vs_matched_lowpriority = MA_shortest_vs_matched_lowpriority ,
+##            MA_shortest_vs_matched_nodes = MA_shortest_vs_matched_nodes,
+##            MA_shortest_vs_matched_left_turns = MA_shortest_vs_matched_left_turns,
+##            MA_shortest_vs_matched_right_turns = MA_shortest_vs_matched_right_turns,
+##            MA_shortest_vs_matched_crossings = MA_shortest_vs_matched_crossings,
+##            MA_shortest_vs_matched_tls_nodes = MA_shortest_vs_matched_tls_nodes ,
+##            MA_shortest_vs_matched_tls_left_turns = MA_shortest_vs_matched_tls_left_turns,
+##            MA_shortest_vs_matched_tls_right_turns = MA_shortest_vs_matched_tls_right_turns,
+##            MA_shortest_vs_matched_tls_crossings = MA_shortest_vs_matched_tls_crossings,
+##            MA_shortest_vs_matched_av_n_connections_per_node = MA_shortest_vs_matched_av_n_connections_per_node,
             #    ------------------------------------------------------------------------------------------------------------------Dynamic analysis
 ##            MA_speeds_inmotion_av = MA_speeds_inmotion_av,
 ##            MA_waiting_times_share = MA_waiting_times_share,
@@ -14903,7 +16078,38 @@ class CyclistsDatabaseAnalyzer(Process):
 ##            MA_real_vs_expected1_waiting_time = MA_real_vs_expected1_waiting_time,
 ##            MA_real_vs_expected2_waiting_time = MA_real_vs_expected2_waiting_time,
         )
-        
+        self.cyclistsdatabase.MA_lengths_route_matched[ids_cyclistsdatabase_res] = MA_lengths_route_matched,
+        self.cyclistsdatabase.MA_lengths_within_center[ids_cyclistsdatabase_res] = MA_lengths_within_center,
+        self.cyclistsdatabase.MA_speeds_av_matched[ids_cyclistsdatabase_res] = MA_speeds_av_matched,
+        self.cyclistsdatabase.MA_numbers_prioritychange[ids_cyclistsdatabase_res] = MA_numbers_prioritychange,
+        self.cyclistsdatabase.MA_matched_exclusive[ids_cyclistsdatabase_res] =MA_matched_exclusive ,
+        self.cyclistsdatabase.MA_matched_contrary[ids_cyclistsdatabase_res] =MA_matched_contrary ,
+        self.cyclistsdatabase.MA_matched_mixed[ids_cyclistsdatabase_res] = MA_matched_mixed,
+        self.cyclistsdatabase.MA_matched_lowpriority[ids_cyclistsdatabase_res] = MA_matched_lowpriority,
+        self.cyclistsdatabase.MA_matched_nodes[ids_cyclistsdatabase_res] = MA_matched_nodes,
+        self.cyclistsdatabase.MA_matched_left_turns[ids_cyclistsdatabase_res] = MA_matched_left_turns,
+        self.cyclistsdatabase.MA_matched_right_turns[ids_cyclistsdatabase_res] = MA_matched_right_turns,
+        self.cyclistsdatabase.MA_matched_crossings[ids_cyclistsdatabase_res] = MA_matched_crossings,
+        self.cyclistsdatabase.MA_matched_tls_nodes[ids_cyclistsdatabase_res] = MA_matched_tls_nodes,
+        self.cyclistsdatabase.MA_matched_tls_left_turns[ids_cyclistsdatabase_res] = MA_matched_tls_left_turns,
+        self.cyclistsdatabase.MA_matched_tls_right_turns[ids_cyclistsdatabase_res] = MA_matched_tls_right_turns,
+        self.cyclistsdatabase.MA_matched_tls_crossings[ids_cyclistsdatabase_res] =MA_matched_tls_crossings ,
+        self.cyclistsdatabase.MA_av_n_connections_per_node[ids_cyclistsdatabase_res] = MA_av_n_connections_per_node,
+        self.cyclistsdatabase.MA_shortest_length[ids_cyclistsdatabase_res] = MA_shortest_length,
+        self.cyclistsdatabase.MA_shortest_vs_matched_numbers_prioritychange[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_numbers_prioritychange,
+        self.cyclistsdatabase.MA_shortest_vs_matched_exclusive[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_exclusive,
+        self.cyclistsdatabase.MA_shortest_vs_matched_contrary[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_contrary,
+        self.cyclistsdatabase.MA_shortest_vs_matched_mixed[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_mixed,
+        self.cyclistsdatabase.MA_shortest_vs_matched_lowpriority[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_lowpriority ,
+        self.cyclistsdatabase.MA_shortest_vs_matched_nodes[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_nodes,
+        self.cyclistsdatabase.MA_shortest_vs_matched_left_turns[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_left_turns,
+        self.cyclistsdatabase.MA_shortest_vs_matched_right_turns[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_right_turns,
+        self.cyclistsdatabase.MA_shortest_vs_matched_crossings[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_crossings,
+        self.cyclistsdatabase.MA_shortest_vs_matched_tls_nodes[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_tls_nodes ,
+        self.cyclistsdatabase.MA_shortest_vs_matched_tls_left_turns[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_tls_left_turns,
+        self.cyclistsdatabase.MA_shortest_vs_matched_tls_right_turns[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_tls_right_turns,
+        self.cyclistsdatabase.MA_shortest_vs_matched_tls_crossings[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_tls_crossings,
+        self.cyclistsdatabase.MA_shortest_vs_matched_av_n_connections_per_node[ids_cyclistsdatabase_res] = MA_shortest_vs_matched_av_n_connections_per_node,
         self.cyclistsdatabase.MA_speeds_inmotion_av[ids_cyclistsdatabase_res] = MA_speeds_inmotion_av
         self.cyclistsdatabase.MA_waiting_times_share[ids_cyclistsdatabase_res] = MA_waiting_times_share
         self.cyclistsdatabase.MA_intersections_waiting_times[ids_cyclistsdatabase_res] = MA_intersections_waiting_times
@@ -15067,6 +16273,15 @@ class TripsDatabase(am.ArrayObjman):
                                     info = 'Share of matched route traveled in exclusive bike path',
                                     )) 
                                     
+        self.add_col(am.ArrayConf('matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share of matched route in the contrary direction',
+                                    symbol = 'Contr share match',
+                                    unit = '%',
+                                    info = 'Share of matched route traveled in the contrary direction',
+                                    )) 
+                                    
         self.add_col(am.ArrayConf('matched_mixed', default = -1.0,
                                     dtype = np.float32,
                                     groupnames = ['results'], 
@@ -15192,6 +16407,15 @@ class TripsDatabase(am.ArrayObjman):
                                     symbol = 'Share Excl match vs short',
                                     unit = '%',
                                     info = 'Share of Exclusive roads in the matched length minus share of Exlusive roads in the shortest length.',
+                                    )) 
+                                    
+        self.add_col(am.ArrayConf('shortest_vs_matched_contrary', default = -1.0,
+                                    dtype = np.float32,
+                                    groupnames = ['results'], 
+                                    name = 'Share. matched length vs share shortest length - only contrary-direction links',
+                                    symbol = 'Share Contr match vs short',
+                                    unit = '%',
+                                    info = 'Share of contrary-direction roads in the matched length minus share of contrary-direction roads in the shortest length.',
                                     )) 
                                     
         self.add_col(am.ArrayConf('shortest_vs_matched_mixed', default = -1.0,
@@ -15521,7 +16745,7 @@ class TripsDatabaseAnalyzer(Process):
                             parent = mapmatching,
                             name = 'Trips Database Analyzer', 
                             logger = logger,
-                            info =""" ...
+                            info =""" Elaborated analysis of the GPS trips
                             """
                             )
         
@@ -15595,6 +16819,7 @@ class TripsDatabaseAnalyzer(Process):
         
         numbers_prioritychange = routesresults_matched.numbers_prioritychange[ids_routesresults_matched]/lengths_route_matched*1000.
         matched_exclusive = routesresults_matched.lengths_exclusive[ids_routesresults_matched]/lengths_route_matched*100.
+        matched_contrary = routesresults_matched.lengths_contrary[ids_routesresults_matched]/lengths_route_matched*100.
         matched_mixed = routesresults_matched.lengths_mixed[ids_routesresults_matched]/lengths_route_matched*100.
         matched_lowpriority = routesresults_matched.lengths_low_priority[ids_routesresults_matched]/lengths_route_matched*100.
         matched_nodes = routesresults_matched.numbers_nodes[ids_routesresults_matched]/lengths_route_matched*1000.
@@ -15611,6 +16836,7 @@ class TripsDatabaseAnalyzer(Process):
         shortest_length = routesresults_shortest.distances[ids_routesresults_shortest]/lengths_route_matched*100.
         shortest_vs_matched_numbers_prioritychange = numbers_prioritychange - routesresults_shortest.numbers_prioritychange[ids_routesresults_matched]/lengths_route_shortest*1000.
         shortest_vs_matched_exclusive = matched_exclusive - routesresults_shortest.lengths_exclusive[ids_routesresults_shortest]/lengths_route_shortest*100.
+        shortest_vs_matched_contrary = matched_contrary - routesresults_shortest.lengths_contrary[ids_routesresults_shortest]/lengths_route_shortest*100.
         shortest_vs_matched_mixed = matched_mixed - routesresults_shortest.lengths_mixed[ids_routesresults_shortest]/lengths_route_shortest*100.
         shortest_vs_matched_lowpriority = matched_lowpriority - routesresults_shortest.lengths_low_priority[ids_routesresults_shortest]/lengths_route_shortest*100.  
         shortest_vs_matched_nodes = matched_nodes - routesresults_shortest.numbers_nodes[ids_routesresults_shortest]/lengths_route_shortest*1000.  
@@ -15720,44 +16946,44 @@ class TripsDatabaseAnalyzer(Process):
         ids_no_tls_right_turns = ids_routesresults_matched[(matched_tls_right_turns == 0)]
         ids_no_tls_crossings = ids_routesresults_matched[(matched_tls_crossings == 0)]
         
-        left_turns_waiting_times[ids_no_left_turns] = -1
-        right_turns_waiting_times[ids_no_right_turns] = -1
-        crossings_waiting_times[ids_no_crossings] = -1
-        tls_intersections_waiting_times[ids_no_tls] = -1
-        tls_left_turns_waiting_times[ids_no_tls_left_turns] = -1
-        tls_right_turns_waiting_times[ids_no_tls_right_turns] = -1
-        tls_crossings_waiting_times[ids_no_tls_crossings] = -1
+        left_turns_waiting_times[ids_no_left_turns] = -1.
+        right_turns_waiting_times[ids_no_right_turns] = -1.
+        crossings_waiting_times[ids_no_crossings] = -1.
+        tls_intersections_waiting_times[ids_no_tls] = -1.
+        tls_left_turns_waiting_times[ids_no_tls_left_turns] = -1.
+        tls_right_turns_waiting_times[ids_no_tls_right_turns] = -1.
+        tls_crossings_waiting_times[ids_no_tls_crossings] = -1.
         
-        real_vs_expected_waiting_time_left_turns[ids_no_left_turns] = -1
-        real_vs_expected_waiting_time_right_turns[ids_no_right_turns] = -1
-        real_vs_expected_waiting_time_crossings[ids_no_crossings] = -1
-        real_vs_expected_waiting_time_tls_nodes[ids_no_tls] = -1
-        real_vs_expected_waiting_time_left_turns_tls[ids_no_tls_left_turns] = -1
-        real_vs_expected_waiting_time_right_turns_tls[ids_no_tls_right_turns] = -1
-        real_vs_expected_waiting_time_crossings_tls[ids_no_tls_crossings] = -1
+        real_vs_expected_waiting_time_left_turns[ids_no_left_turns] = -1.
+        real_vs_expected_waiting_time_right_turns[ids_no_right_turns] = -1.
+        real_vs_expected_waiting_time_crossings[ids_no_crossings] = -1.
+        real_vs_expected_waiting_time_tls_nodes[ids_no_tls] = -1.
+        real_vs_expected_waiting_time_left_turns_tls[ids_no_tls_left_turns] = -1.
+        real_vs_expected_waiting_time_right_turns_tls[ids_no_tls_right_turns] = -1.
+        real_vs_expected_waiting_time_crossings_tls[ids_no_tls_crossings] = -1.
 
-        speeds_inmotion_av[ids_no_dyn] = -1
-        waiting_times_share[ids_no_dyn] = -1
-        intersections_waiting_times[ids_no_dyn] = -1
-        left_turns_waiting_times[ids_no_dyn] = -1
-        right_turns_waiting_times[ids_no_dyn] = -1
-        crossings_waiting_times[ids_no_dyn] = -1
-        tls_intersections_waiting_times[ids_no_dyn] = -1
-        tls_left_turns_waiting_times[ids_no_dyn] = -1
-        tls_right_turns_waiting_times[ids_no_dyn] = -1
-        tls_crossings_waiting_times[ids_no_dyn] = -1
-        edges_waiting_times_av[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_edges[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_nodes[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_tls_nodes[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_left_turns[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_right_turns[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_crossings[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_left_turns_tls[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_right_turns_tls[ids_no_dyn] = -1
-        real_vs_expected_waiting_time_crossings_tls[ids_no_dyn] = -1
-        real_vs_expected1_waiting_time[ids_no_dyn] = -1
-        real_vs_expected2_waiting_time[ids_no_dyn] = -1
+        speeds_inmotion_av[ids_no_dyn] = -1.
+        waiting_times_share[ids_no_dyn] = -1.
+        intersections_waiting_times[ids_no_dyn] = -1.
+        left_turns_waiting_times[ids_no_dyn] = -1.
+        right_turns_waiting_times[ids_no_dyn] = -1.
+        crossings_waiting_times[ids_no_dyn] = -1.
+        tls_intersections_waiting_times[ids_no_dyn] = -1.
+        tls_left_turns_waiting_times[ids_no_dyn] = -1.
+        tls_right_turns_waiting_times[ids_no_dyn] = -1.
+        tls_crossings_waiting_times[ids_no_dyn] = -1.
+        edges_waiting_times_av[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_edges[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_nodes[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_tls_nodes[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_left_turns[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_right_turns[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_crossings[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_left_turns_tls[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_right_turns_tls[ids_no_dyn] = -1.
+        real_vs_expected_waiting_time_crossings_tls[ids_no_dyn] = -1.
+        real_vs_expected1_waiting_time[ids_no_dyn] = -1.
+        real_vs_expected2_waiting_time[ids_no_dyn] = -1.
         
         
                  
@@ -15774,6 +17000,7 @@ class TripsDatabaseAnalyzer(Process):
                                             
                                             numbers_prioritychange = numbers_prioritychange,
                                             matched_exclusive = matched_exclusive,
+                                            matched_contrary = matched_contrary,
                                             matched_mixed = matched_mixed,
                                             matched_lowpriority = matched_lowpriority,
                                             matched_nodes = matched_nodes,
@@ -15789,6 +17016,7 @@ class TripsDatabaseAnalyzer(Process):
                                             shortest_length = shortest_length,
                                             shortest_vs_matched_numbers_prioritychange = shortest_vs_matched_numbers_prioritychange,
                                             shortest_vs_matched_exclusive = shortest_vs_matched_exclusive,
+                                            shortest_vs_matched_contrary = shortest_vs_matched_contrary,
                                             shortest_vs_matched_mixed = shortest_vs_matched_mixed,
                                             shortest_vs_matched_lowpriority = shortest_vs_matched_lowpriority,
                                             shortest_vs_matched_nodes = shortest_vs_matched_nodes,
@@ -16129,6 +17357,12 @@ class Routesanalyzer(Process):
         for i in range(max(ids_edge)+1): 
             edge_speeds.append([])
             edge_speeds_in_motion.append([])
+        connections_waitingtimes = []
+        nodes_waitingtimes = []
+        for i in range(max(ids_connection)+1): 
+            connections_waitingtimes.append([])
+        for i in range(max(ids_node)+1): 
+            nodes_waitingtimes.append([])
         good_traces = 0
         bad_traces = 0
         all_connections = []
@@ -16586,8 +17820,12 @@ class Routesanalyzer(Process):
                     
                     #calculating waiting times
                     point_speeds = [self.waitspeed]
+                    
+                    current_waitingtime_total = 0.0
+                        
 ##                    actual_edge_starting_time_and_position = [point_times[0], point_positions_on_poly[0]]
                     id_arc_pre = 0
+                    last_conn = 0
                     for i, point_position_on_poly, point_time, id_arc_point, is_connection_point   in zip(range(len(point_times)), point_positions_on_poly, point_times, ids_arc_point, are_connection_points):
 
                         if i>0:
@@ -16608,6 +17846,7 @@ class Routesanalyzer(Process):
                             if velocity < self.waitspeed:
                                 number_wait_route +=1
                                 time_wait_route += delta_time
+                                
                                 if is_connection_point:
                                     number_wait_route_at_junktions +=1
                                     time_wait_junction_route += delta_time
@@ -16627,7 +17866,7 @@ class Routesanalyzer(Process):
                                         
                                     if id_arc_point != id_arc_pre:
                                         n_wait_times_edge_at_int[lanes.ids_edge[connections.ids_fromlane[id_arc_point]]] += 1
-                                        n_wait_times_conn[id_arc_point] += 1
+                                        print 'connection', id_arc_point, 'n +1'
                                         n_wait_times_node[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[id_arc_point]]]] += 1
                                         if connections.turns_type[id_arc_point] == 'left_turn':
                                             number_wait_route_at_left_turns += 1
@@ -16635,6 +17874,8 @@ class Routesanalyzer(Process):
                                             number_wait_route_at_right_turns += 1
                                         if connections.turns_type[id_arc_point] == 'crossing':
                                             number_wait_route_at_crossings += 1
+
+                                            
                                             
                                     if nodes.types[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[id_arc_point]]]] == 1 or nodes.types[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[id_arc_point]]]] == 5 or nodes.types[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[id_arc_point]]]] == 9:
                                         time_wait_tls_route += delta_time
@@ -16660,15 +17901,37 @@ class Routesanalyzer(Process):
                                                 number_wait_route_at_right_turns_tls += 1
                                             if connections.turns_type[id_arc_point] == 'crossing':
                                                 number_wait_route_at_crossings_tls += 1                                
-                                else: 
+                                else:
+
                                     wait_times_edge[id_arc_point] += delta_time
                                     if id_arc_point != id_arc_pre:
                                         n_wait_times_edge[id_arc_point] += 1
                                 
+                                if id_arc_point != id_arc_pre and last_conn > 0:
+                                    connections_waitingtimes[last_conn].append(current_waitingtime_total)
+                                    nodes_waitingtimes[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[last_conn]]]].append(current_waitingtime_total)
+                                    print 'ADD', 'current_waitingtime_total', current_waitingtime_total, 'id_arc_point', last_conn
+                                    current_waitingtime_total = 0.0
+                                
+                                if is_connection_point:
+                                    last_conn = id_arc_point
+                                else:
+                                    last_conn = 0
+                                
+                                
+                                if id_arc_point != id_arc_pre:
+                                    current_waitingtime_total = 0.0
+                                current_waitingtime_total  += delta_time
+                                print 'current_waitingtime_total', current_waitingtime_total, 'id_arc_point', id_arc_point
                                 id_arc_pre = id_arc_point
 
                         
-                          
+                    #add_last_waiting_time
+                    if last_conn > 0:
+                        connections_waitingtimes[last_conn].append(current_waitingtime_total)
+                        nodes_waitingtimes[edges.ids_tonode[lanes.ids_edge[connections.ids_fromlane[last_conn]]]].append(current_waitingtime_total)
+                        print 'ADD', 'current_waitingtime_total', current_waitingtime_total, 'id_arc_point', last_conn
+                        current_waitingtime_total = 0.0
                     print 'there were', len(irregular_indices), 'irregular indices'    
                     print 'time_wait_route', time_wait_route,'time_wait_junction_route',time_wait_junction_route, 'time_wait_tls_route', time_wait_tls_route
 ##                    print 'GOOD TRACES', good_traces, 'OF',(good_traces+bad_traces) ,'/',len(ids_trip)        
@@ -16769,31 +18032,31 @@ class Routesanalyzer(Process):
                     bad_traces+=1
                     print 'trip', id_trip, 'is not adeguate for the speed analysis or too few points remained after point filtering, with', len(irregular_indices), 'irregular points'
 
-                    routesresults_matched.times_inmotion[id_res]= -1
-                    routesresults_matched.n_times_wait[id_res] = -1
-                    routesresults_matched.times_wait[id_res] = -1
-                    routesresults_matched.times_wait_edges[id_res] = -1
-                    routesresults_matched.n_times_wait_edges[id_res] = -1
-                    routesresults_matched.n_times_wait_tls[id_res] = -1
-                    routesresults_matched.times_wait_tls[id_res] = -1
-                    routesresults_matched.n_times_wait_junction[id_res] = -1
-                    routesresults_matched.times_wait_junction[id_res]= -1
-                    routesresults_matched.n_times_wait_left_turn[id_res]= -1
-                    routesresults_matched.times_wait_left_turn[id_res]= -1
-                    routesresults_matched.n_times_wait_right_turn[id_res]= -1
-                    routesresults_matched.times_wait_right_turn[id_res]= -1
-                    routesresults_matched.n_times_wait_crossing[id_res]= -1
-                    routesresults_matched.times_wait_crossing[id_res]= -1
+                    routesresults_matched.times_inmotion[id_res]= -1.
+                    routesresults_matched.n_times_wait[id_res] = -1.
+                    routesresults_matched.times_wait[id_res] = -1.
+                    routesresults_matched.times_wait_edges[id_res] = -1.
+                    routesresults_matched.n_times_wait_edges[id_res] = -1.
+                    routesresults_matched.n_times_wait_tls[id_res] = -1.
+                    routesresults_matched.times_wait_tls[id_res] = -1.
+                    routesresults_matched.n_times_wait_junction[id_res] = -1.
+                    routesresults_matched.times_wait_junction[id_res]= -1.
+                    routesresults_matched.n_times_wait_left_turn[id_res]= -1.
+                    routesresults_matched.times_wait_left_turn[id_res]= -1.
+                    routesresults_matched.n_times_wait_right_turn[id_res]= -1.
+                    routesresults_matched.times_wait_right_turn[id_res]= -1.
+                    routesresults_matched.n_times_wait_crossing[id_res]= -1.
+                    routesresults_matched.times_wait_crossing[id_res]= -1.
                     
-                    routesresults_matched.n_times_wait_left_turn_tls[id_res]= -1
-                    routesresults_matched.times_wait_left_turn_tls[id_res]= -1
-                    routesresults_matched.n_times_wait_right_turn_tls[id_res]= -1
-                    routesresults_matched.times_wait_right_turn_tls[id_res]= -1
-                    routesresults_matched.n_times_wait_crossing_tls[id_res]= -1
-                    routesresults_matched.times_wait_crossing_tls[id_res]= -1  
-                    distances_real[id_route_matched] = -1
-                    durations_real[id_route_matched] = -1
-                    average_speed_real = -1
+                    routesresults_matched.n_times_wait_left_turn_tls[id_res]= -1.
+                    routesresults_matched.times_wait_left_turn_tls[id_res]= -1.
+                    routesresults_matched.n_times_wait_right_turn_tls[id_res]= -1.
+                    routesresults_matched.times_wait_right_turn_tls[id_res]= -1.
+                    routesresults_matched.n_times_wait_crossing_tls[id_res]= -1.
+                    routesresults_matched.times_wait_crossing_tls[id_res]= -1.
+                    distances_real[id_route_matched] = -1.
+                    durations_real[id_route_matched] = -1.
+                    average_speed_real = -1.
                     
                     
                 
@@ -16825,6 +18088,7 @@ class Routesanalyzer(Process):
                                                 timestamps = trips.timestamps[trips.routes.get_value().ids_trip[id_route_matched]],
                                                 lengths_mixed = np.sum(distances[ids_edge_matched[accesslevels_matched==1]]),
                                                 lengths_exclusive = np.sum(distances[ids_edge_matched[accesslevels_matched==2]]),
+                                                lengths_contrary = np.sum(distances[ids_edge_matched[accesslevels_matched==-2]]),
                                                 lengths_low_priority = np.sum(distances[ids_edge_matched[priorities_matched <= priority_max_low]]),
                                                 lengths_overlap_matched = dist_matched,# 100% overlap
                                                 numbers_nodes = n_nodes_matched,
@@ -16850,6 +18114,7 @@ class Routesanalyzer(Process):
                                                 timestamps = trips.timestamps[trips.routes.get_value().ids_trip[id_route_matched]],
                                                 lengths_mixed = np.sum(distances[ids_edge_matched[accesslevels_matched==1]]),
                                                 lengths_exclusive = np.sum(distances[ids_edge_matched[accesslevels_matched==2]]),
+                                                lengths_contrary = np.sum(distances[ids_edge_matched[accesslevels_matched==-2]]),
                                                 lengths_low_priority = np.sum(distances[ids_edge_matched[priorities_matched <= priority_max_low]]),
                                                 lengths_overlap_matched = dist_matched,# 100% overlap
                                                 numbers_nodes = n_nodes_matched,
@@ -16977,6 +18242,7 @@ class Routesanalyzer(Process):
                                                 durations = dist_shortest/linespeed_matched+timeloss_intersection * n_nodes_shortest + timeloss_tl * n_tls_shortest,
                                                 lengths_mixed = np.sum(distances[ids_edge_shortest[accesslevels_shortest==1]]),
                                                 lengths_exclusive = np.sum(distances[ids_edge_shortest[accesslevels_shortest==2]]),
+                                                lengths_contrary = np.sum(distances[ids_edge_shortest[accesslevels_shortest==-2]]),
                                                 lengths_low_priority = np.sum(distances[ids_edge_shortest[priorities_shortest <= priority_max_low]]),
                                                 numbers_nodes = n_nodes_shortest,
                                                 numbers_nodes_tls = n_tls_shortest,
@@ -17099,7 +18365,7 @@ class Routesanalyzer(Process):
                 connectionsresults.numbers_connections_at_node[ids_connectionresmap[id_connection]] = connections.numbers_connections_at_node[id_connection]
                 connectionsresults.type_turn[ids_connectionresmap[id_connection]] = connections.turns_type[id_connection]
                 connectionsresults.lengths[ids_connectionresmap[id_connection]] = connections.lengths[id_connection]
-
+                connectionsresults.list_waiting_times[ids_connectionresmap[id_connection]] = np.array(connections_waitingtimes[id_connection])
 
             
             all_edges = np.unique(all_edges)
@@ -17199,6 +18465,7 @@ class Routesanalyzer(Process):
             nodesresults.n_right_turns[id_noderes] = nodes.n_right_turns[id_node]
             nodesresults.n_crossings[id_noderes] = nodes.n_crossings[id_node]
             nodesresults.n_u_turns[id_noderes] = nodes.n_u_turns[id_node]
+            nodesresults.list_waiting_times[id_noderes] = nodes_waitingtimes[id_node]
         
 ##        if self.is_nodeana:
 ##            # do node type analyses
@@ -17488,6 +18755,7 @@ class Routesanalyzer(Process):
                                                 #durations = dist_shortest/linespeed_matched+timeloss_intersection * n_nodes_shortest + timeloss_tl * n_tls_shortest,
                                                 lengths_mixed = np.sum(distances[ids_edge_shortest[accesslevels_shortest==1]]),
                                                 lengths_exclusive = np.sum(distances[ids_edge_shortest[accesslevels_shortest==2]]),
+                                                lengths_contrary = np.sum(distances[ids_edge_shortest[accesslevels_shortest==-2]]),
                                                 lengths_low_priority = np.sum(distances[ids_edge_shortest[priorities_shortest <= priority_max_low]]),
                                                 numbers_nodes = n_nodes_shortest,
                                                 numbers_nodes_tls = n_tls_shortest,

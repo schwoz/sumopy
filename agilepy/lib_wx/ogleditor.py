@@ -5021,7 +5021,8 @@ class OGLcanvas(glcanvas.GLCanvas):
 
     def OnLeftDown(self, event, is_draw = False):
         #print 'GLCanvas.OnLeftDown',self._tool
-        if (event.ControlDown()&event.ShiftDown())&(self.action == ''):
+        is_control_down = event.ControlDown()# | event.RawControlDown() | event.MetaDown() 
+        if (is_control_down&event.ShiftDown())&(self.action == ''):
           self.action = 'drag'
           self.BeginGrap(event)
           event.Skip()
